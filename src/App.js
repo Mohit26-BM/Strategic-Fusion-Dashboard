@@ -8,8 +8,13 @@ import IntelligencePanel from "./components/IntelligencePanel";
 import TerrainMapControl, {
   DEFAULT_TERRAIN_CONFIG,
 } from "./components/TerrainMapControl";
-import { fetchIntelligence, addIntelligence, bulkAddIntelligence } from "./services/api";
+import {
+  fetchIntelligence,
+  addIntelligence,
+  bulkAddIntelligence,
+} from "./services/api";
 import { normalizeIntelType } from "./utils/intelligenceTypes";
+import LandingPage from "./components/LandingPage";
 
 const DEFAULT_SECTIONS = {
   ingestion: true,
@@ -19,6 +24,7 @@ const DEFAULT_SECTIONS = {
 };
 
 function App() {
+  const [showDashboard, setShowDashboard] = useState(false);
   const [data, setData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
   const [selectedNode, setSelectedNode] = useState(null);
@@ -28,11 +34,9 @@ function App() {
   const [sectionState, setSectionState] = useState(DEFAULT_SECTIONS);
   const [terrainConfig, setTerrainConfig] = useState(() => {
     const savedValue = window.localStorage.getItem("terrain-config");
-
     if (!savedValue) {
       return DEFAULT_TERRAIN_CONFIG;
     }
-
     try {
       return JSON.parse(savedValue);
     } catch (error) {
@@ -62,91 +66,49 @@ function App() {
   }, []);
 
   useEffect(() => {
-    loadFromMongoDB();
-  }, [loadFromMongoDB]);
-
-  useEffect(() => {
-    if (source === "mongodb") {
-      const interval = setInterval(loadFromMongoDB, 10000);
-      return () => clearInterval(interval);
+    if (showDashboard) {
+      loadFromMongoDB();
     }
-  }, [source, loadFromMongoDB]);
+  }, [showDashboard, loadFromMongoDB]);
 
-  useEffect(() => {
-    window.localStorage.setItem("terrain-config", JSON.stringify(terrainConfig));
-  }, [terrainConfig]);
-
-  const handleImportedData = useCallback(async (importedData, nextSource) => {
+  const handleAddNode = async (newNode) => {
     try {
-      await bulkAddIntelligence(importedData);
+      await addIntelligence(newNode);
       await loadFromMongoDB();
-      alert(`Successfully imported ${importedData.length} nodes to MongoDB`);
-      setSource(nextSource);
-      setSectionState((current) => ({
-        ...current,
-        ingestion: importedData.length > 0 ? false : current.ingestion,
-      }));
     } catch (error) {
-      console.error('Failed to import nodes:', error);
-      alert('Import failed: ' + error.message);
+      console.error("Failed to add node:", error);
+      alert("Failed to save node: " + error.message);
     }
-  }, [loadFromMongoDB]);
-
-  const handleAddNode = useCallback(async (newNode) => {
-    const normalizedNode = {
-      ...newNode,
-      type: normalizeIntelType(newNode.type),
-    };
-    try {
-      await addIntelligence(normalizedNode);
-      await loadFromMongoDB();
-      setSource("manual");
-      setSectionState((current) => ({
-        ...current,
-        manual: false,
-      }));
-    } catch (e) {
-      // Optionally show error to user
-      console.error("Failed to save manual node", normalizedNode, e);
-    }
-  }, [loadFromMongoDB]);
-
-  const handleFilterChange = useCallback((nextFilteredData, meta = {}) => {
-    setFilteredData(nextFilteredData);
-
-    if (!meta.shouldFocus) {
-      return;
-    }
-
-    if (nextFilteredData.length === 1) {
-      setSelectedNode(nextFilteredData[0]);
-    } else if (
-      selectedNode &&
-      !nextFilteredData.some(
-        (node) =>
-          node.lat === selectedNode.lat &&
-          node.lng === selectedNode.lng &&
-          node.title === selectedNode.title &&
-          node.type === selectedNode.type,
-      )
-    ) {
-      setSelectedNode(null);
-    }
-
-    setMapFocusRequest({
-      nodes: nextFilteredData,
-      mode: nextFilteredData.length === 1 ? "single" : "fit",
-      stamp: Date.now(),
-    });
-  }, [selectedNode]);
-
-  const toggleSection = (key) => {
-    setSectionState((current) => ({
-      ...current,
-      [key]: !current[key],
-    }));
   };
 
+  const handleImportedData = async (importedNodes) => {
+    try {
+      await bulkAddIntelligence(importedNodes);
+      await loadFromMongoDB();
+      alert(`Successfully imported ${importedNodes.length} nodes`);
+    } catch (error) {
+      console.error("Failed to import:", error);
+      alert("Import failed: " + error.message);
+    }
+  };
+
+  const handleFilterChange = (filtered, options = {}) => {
+    setFilteredData(filtered);
+    if (options.shouldFocus && options.activeType !== "all") {
+      setMapFocusRequest({ type: options.activeType, timestamp: Date.now() });
+    }
+  };
+
+  const toggleSection = (key) => {
+    setSectionState((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  // SHOW LANDING PAGE IF NOT YET ENTERED
+  if (!showDashboard) {
+    return <LandingPage onEnter={() => setShowDashboard(true)} />;
+  }
+
+  // SHOW DASHBOARD
   return (
     <div className="app-shell">
       <button
@@ -167,7 +129,8 @@ function App() {
           <p className="sidebar-eyebrow">Strategic Fusion Dashboard</p>
           <h1 className="sidebar-title">Intelligence Control</h1>
           <p className="sidebar-subtitle">
-            One workspace for ingestion, geospatial context, and rapid node review.
+            One workspace for ingestion, geospatial context, and rapid node
+            review.
           </p>
 
           <div className="sidebar-metrics">
@@ -209,7 +172,10 @@ function App() {
             isOpen={sectionState.terrain}
             onToggle={() => toggleSection("terrain")}
           >
-            <TerrainMapControl value={terrainConfig} onChange={setTerrainConfig} />
+            <TerrainMapControl
+              value={terrainConfig}
+              onChange={setTerrainConfig}
+            />
           </SectionCard>
 
           <SectionCard
@@ -243,7 +209,8 @@ function App() {
         </div>
 
         <div className="map-status-pill">
-          Live View: {filteredData.length} nodes across {source.toUpperCase()} intake
+          Live View: {filteredData.length} nodes across {source.toUpperCase()}{" "}
+          intake
         </div>
       </main>
     </div>

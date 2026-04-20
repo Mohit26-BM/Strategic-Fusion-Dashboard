@@ -460,3 +460,30 @@ code {
     width: auto;
   }
 }
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+button:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 12px 32px rgba(102, 126, 234, 0.6) !important;
+}

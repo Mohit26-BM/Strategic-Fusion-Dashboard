@@ -179,7 +179,6 @@ Supported input aliases during import include:
 - `title` or `name`
 - `description` or `summary`
 
-
 ## Help & Usage
 
 A floating question mark "?" button on the map links to `/help.html`, which explains what the project is, how to use it, and its limitations.
@@ -196,7 +195,6 @@ npm start
 ```
 
 The frontend runs at `http://localhost:3000`.
-
 
 ### Back end
 
@@ -227,6 +225,7 @@ To update existing data with city info, run:
 ```bash
 node updateCities.js
 ```
+
 in the `backend` folder. This will add a `city` field and update titles/descriptions for all nodes using OpenStreetMap reverse geocoding.
 
 ## Build
