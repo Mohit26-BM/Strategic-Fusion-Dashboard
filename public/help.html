@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Intelligence Dashboard Help</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #10151c; color: #f3f6fa; margin: 0; padding: 0; }
+    .container { max-width: 700px; margin: 40px auto; background: #18202b; border-radius: 12px; padding: 32px 28px; box-shadow: 0 2px 16px #0004; }
+    h1, h2 { color: #2A81CB; }
+    h1 { font-size: 2.2em; margin-bottom: 0.2em; }
+    h2 { margin-top: 2em; }
+    ul, ol { margin-left: 1.5em; }
+    code { background: #232b36; color: #aef; padding: 2px 6px; border-radius: 4px; }
+    a { color: #7ecbff; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Intelligence Dashboard Help</h1>
+    <p>This dashboard is a workspace for ingesting, visualizing, and filtering geospatial intelligence nodes. It is designed for rapid review, mission planning, and situational awareness.</p>
+
+    <h2>How to Use</h2>
+    <ol>
+      <li><b>Ingest Data:</b> Use the <b>File Upload</b> or <b>Add Node</b> forms to add intelligence nodes. Supported types include OSINT, HUMINT, SIGINT, CYBINT, IMINT, and more.</li>
+      <li><b>Filter & Search:</b> Use the filter panel to search by type, source, or keywords. The map and list update instantly.</li>
+      <li><b>Map & Overlay:</b> Visualize nodes on the map. Use <b>Terrain Setup</b> to overlay mission images or custom maps.</li>
+      <li><b>Review Details:</b> Click a node to see its full dossier and metadata.</li>
+    </ol>
+
+    <h2>Features</h2>
+    <ul>
+      <li>Bulk and manual data ingestion (with validation)</li>
+      <li>Geospatial filtering and search</li>
+      <li>Custom terrain overlays (mission images, satellite, etc.)</li>
+      <li>Legend and type color-coding</li>
+      <li>MongoDB backend for persistence</li>
+    </ul>
+
+    <h2>Limitations</h2>
+    <ul>
+      <li>Overlay alignment requires manual bounds entry</li>
+      <li>Reverse geocoding uses free OpenStreetMap API (rate limits apply)</li>
+      <li>No authentication or access control (demo only)</li>
+      <li>Not for operational use—demo/prototype only</li>
+      <li>Browser local storage used for some settings</li>
+    </ul>
+
+    <h2>More Info</h2>
+    <ul>
+      <li>Source code: <a href="https://github.com/your-repo-url">GitHub</a></li>
+      <li>Contact: <a href="mailto:your@email.com">m26ohitbali@gmail.com</a></li>
+    </ul>
+  </div>
+</body>
+</html>
