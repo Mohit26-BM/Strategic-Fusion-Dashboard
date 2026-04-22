@@ -1,3 +1,4 @@
+console.log("SERVER FILE LOADED");
 const axios = require("axios");
 
 async function getCity(lat, lng) {
