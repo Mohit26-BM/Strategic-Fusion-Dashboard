@@ -16,24 +16,32 @@ function AddNodeForm({ onAdd }) {
 
     const lat = parseFloat(formData.lat);
     const lng = parseFloat(formData.lng);
+    const title = formData.title.trim();
 
-    if (Number.isNaN(lat) || Number.isNaN(lng) || !formData.title.trim()) {
+    // ✅ Better validation feedback
+    if (Number.isNaN(lat) || Number.isNaN(lng) || !title) {
+      alert("Please enter valid latitude, longitude, and title");
       return;
     }
 
     if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-      alert("Invalid coordinates");
+      alert("Coordinates must be within valid ranges");
       return;
     }
 
     onAdd({
       ...formData,
-      title: formData.title.trim(),
-      description: formData.description.trim(),
+      title,
+      description: formData.description.trim() || "",
+
+      // 🔥 IMPORTANT FIX (prevents filter bugs)
+      type: formData.type?.trim().toUpperCase(),
+
       lat,
       lng,
     });
 
+    // Reset form
     setFormData({
       lat: "",
       lng: "",
@@ -52,7 +60,9 @@ function AddNodeForm({ onAdd }) {
           step="any"
           placeholder="Latitude"
           value={formData.lat}
-          onChange={(e) => setFormData({ ...formData, lat: e.target.value })}
+          onChange={(e) =>
+            setFormData({ ...formData, lat: e.target.value })
+          }
           required
           style={inputStyle}
         />
@@ -62,7 +72,9 @@ function AddNodeForm({ onAdd }) {
           step="any"
           placeholder="Longitude"
           value={formData.lng}
-          onChange={(e) => setFormData({ ...formData, lng: e.target.value })}
+          onChange={(e) =>
+            setFormData({ ...formData, lng: e.target.value })
+          }
           required
           style={inputStyle}
         />
@@ -70,7 +82,9 @@ function AddNodeForm({ onAdd }) {
 
       <select
         value={formData.type}
-        onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+        onChange={(e) =>
+          setFormData({ ...formData, type: e.target.value })
+        }
         style={inputStyle}
       >
         {Object.entries(INTELLIGENCE_TYPE_CONFIG).map(([type, config]) => (
@@ -84,7 +98,9 @@ function AddNodeForm({ onAdd }) {
         type="text"
         placeholder="Title"
         value={formData.title}
-        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+        onChange={(e) =>
+          setFormData({ ...formData, title: e.target.value })
+        }
         required
         style={inputStyle}
       />
@@ -125,6 +141,7 @@ function AddNodeForm({ onAdd }) {
   );
 }
 
+// Styles
 const formStyle = {
   display: "grid",
   gap: "10px",
