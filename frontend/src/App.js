@@ -249,7 +249,11 @@ function App() {
       <main className="map-stage">
         <MapView
           data={filteredData}
-          onNodeClick={setSelectedNode}
+          
+          onNodeClick={(node) => {
+            console.log("🧠 APP RECEIVED NODE:", node);
+            setSelectedNode(node);
+          }}
           selectedNode={selectedNode}
           terrainConfig={terrainConfig}
           focusRequest={mapFocusRequest}
@@ -262,7 +266,9 @@ function App() {
         />
 
         {/* Legend in a fixed overlay slot for visibility */}
-        <div style={{ position: "absolute", bottom: 20, right: 20, zIndex: 1000 }}>
+        <div
+          style={{ position: "absolute", bottom: 20, right: 20, zIndex: 1000 }}
+        >
           <Legend count={filteredData.length} data={filteredData} />
         </div>
 
