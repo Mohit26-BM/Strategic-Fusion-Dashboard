@@ -184,15 +184,21 @@ function MapView({
 
             return (
               <Marker
-                key={point._id || `${point.lat}-${point.lng}-${i}`}
-                position={[point.lat, point.lng]}
-                icon={markerIcons[point.type] || markerIcons.OSINT}
-                eventHandlers={{
-                  click: () => onNodeClick(point),
-                  mouseover: () => setHovered(point),
-                  mouseout: () => setHovered(null),
-                }}
-              >
+                  key={point._id || `${point.lat}-${point.lng}-${i}`}
+                  position={[point.lat, point.lng]}
+                  icon={markerIcons[point.type] || markerIcons.OSINT}
+                  eventHandlers={{
+                    click: () => onNodeClick(point),
+                    mouseover: () => setHovered(point),
+                    mouseout: () => setHovered(null),
+                  }}
+                >
+                  {/* Navigation Emoji/Marker: show as a popup for clarity */}
+                  <Popup>
+                    <span role="img" aria-label="navigation">🧭</span> <b>{point.title}</b>
+                    <br />
+                    {point.description}
+                  </Popup>
                 {isSelected && (
                   <CircleMarker
                     center={[point.lat, point.lng]}
