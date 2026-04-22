@@ -2,7 +2,7 @@ require("dotenv").config({ override: true });
 const { MongoClient } = require("mongodb");
 const axios = require("axios");
 
-const uri = process.env.MONGO_URI || "mongodb://localhost:27017";
+const uri = process.env.MONGO_URI || "mongodb+srv://Strategic-Fusion-Dashboard-User:8VeaZs7DPXMMi6wT@cluster01.d03mfnr.mongodb.net/intel_db?retryWrites=true&w=majority";
 const dbName = process.env.MONGO_DB || "intel_db";
 const client = new MongoClient(uri);
 
