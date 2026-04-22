@@ -60,7 +60,9 @@ function App() {
         (n) =>
           n.title?.toLowerCase().includes(term) ||
           n.description?.toLowerCase().includes(term) ||
-          n.city?.toLowerCase().includes(term),
+          n.city?.toLowerCase().includes(term) ||
+          n.title?.toLowerCase().includes(term) ||
+          n.description?.toLowerCase().includes(term),
       );
     }
 
@@ -114,7 +116,16 @@ function App() {
       type: options.activeType || "all",
     });
 
-    if (options.shouldFocus && options.activeType !== "all") {
+    // Focus on node if requested
+    if (options.shouldFocus && options.focusNode) {
+      setMapFocusRequest({
+        mode: "single",
+        lat: options.focusNode.lat,
+        lng: options.focusNode.lng,
+        timestamp: Date.now(),
+      });
+      setSelectedNode(options.focusNode);
+    } else if (options.shouldFocus && options.activeType !== "all") {
       setMapFocusRequest({
         type: options.activeType,
         timestamp: Date.now(),
