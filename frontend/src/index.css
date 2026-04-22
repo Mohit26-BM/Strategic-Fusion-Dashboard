@@ -219,6 +219,7 @@ code {
   border: 1px solid rgba(135, 163, 191, 0.14);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
+  pointer-events: none;
 }
 
 .map-empty-state {
@@ -239,6 +240,11 @@ code {
   -webkit-backdrop-filter: blur(16px);
   color: #eef5fb;
   z-index: 1200;
+}
+
+.leaflet-container {
+  z-index: 0;
+  pointer-events: auto;
 }
 
 .map-empty-kicker,
@@ -280,9 +286,14 @@ code {
   z-index: 2000;
   pointer-events: none;
 }
-.dossier-panel * {
+.dossier-panel button,
+.dossier-panel a,
+.dossier-panel input,
+.dossier-panel textarea,
+.dossier-panel select {
   pointer-events: auto;
 }
+
 .dossier-title {
   margin: 0 0 12px;
   font-size: 22px;
