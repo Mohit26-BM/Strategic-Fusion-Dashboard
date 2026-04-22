@@ -37,7 +37,8 @@ L.Icon.Default.mergeOptions({
 // --------------------
 function isSameNode(a, b) {
   if (!a || !b) return false;
-
+  // Prefer _id if present
+  if (a._id && b._id) return a._id === b._id;
   return (
     Math.abs(a.lat - b.lat) < 0.0001 &&
     Math.abs(a.lng - b.lng) < 0.0001 &&
@@ -222,6 +223,7 @@ function MapView({
                     }}
                     title="Open dossier"
                     onClick={e => {
+                      console.log('🧭 Navigation button clicked for node:', point);
                       onNodeClick(point);
                       // Close the popup after click
                       const popup = e.target.closest('.leaflet-popup');
