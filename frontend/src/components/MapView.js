@@ -213,28 +213,33 @@ function MapView({
               >
                 {/* Navigation Emoji/Marker: show as a clickable button in popup */}
                 <Popup>
-                  <button
+                  <a
+                    href="#"
                     style={{
                       background: "none",
                       border: "none",
                       cursor: "pointer",
                       fontSize: "22px",
                       marginRight: "8px",
+                      textDecoration: "none",
+                      outline: "none",
                     }}
                     title="Open dossier"
-                    onClick={e => {
-                      console.log('🧭 Navigation button clicked for node:', point);
-                      onNodeClick(point);
+                    tabIndex={0}
+                    onClick={function(e) {
+                      e.preventDefault();
+                      window.alert('🧭 Navigation emoji clicked!');
+                      if (typeof onNodeClick === 'function') onNodeClick(point);
                       // Close the popup after click
-                      const popup = e.target.closest('.leaflet-popup');
+                      var popup = e.target.closest('.leaflet-popup');
                       if (popup) {
-                        const closeBtn = popup.querySelector('.leaflet-popup-close-button');
+                        var closeBtn = popup.querySelector('.leaflet-popup-close-button');
                         if (closeBtn) closeBtn.click();
                       }
                     }}
                   >
                     <span role="img" aria-label="navigation">🧭</span>
-                  </button>
+                  </a>
                   <b>{point.title}</b>
                   <br />
                   {point.description}
@@ -259,30 +264,52 @@ function MapView({
 
       {/* Hover card */}
       {hovered && (
-        <div className="map-hover-card" style={{ borderLeft: `6px solid ${getIntelTypeConfig(hovered.type)?.color || '#888'}` }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div
+          className="map-hover-card"
+          style={{
+            borderLeft: `6px solid ${getIntelTypeConfig(hovered.type)?.color || "#888"}`,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {/* Type color dot and label */}
-            <span style={{
-              display: 'inline-block',
-              width: 18,
-              height: 18,
-              borderRadius: '50%',
-              background: getIntelTypeConfig(hovered.type)?.color || '#888',
-              marginRight: 6,
-            }} />
+            <span
+              style={{
+                display: "inline-block",
+                width: 18,
+                height: 18,
+                borderRadius: "50%",
+                background: getIntelTypeConfig(hovered.type)?.color || "#888",
+                marginRight: 6,
+              }}
+            />
             <strong>{hovered.title}</strong>
-            <span style={{
-              background: getIntelTypeConfig(hovered.type)?.color || '#888',
-              color: '#fff',
-              borderRadius: 6,
-              padding: '2px 8px',
-              fontSize: 12,
-              marginLeft: 6,
-            }}>{getIntelTypeConfig(hovered.type)?.shortLabel || hovered.type}</span>
+            <span
+              style={{
+                background: getIntelTypeConfig(hovered.type)?.color || "#888",
+                color: "#fff",
+                borderRadius: 6,
+                padding: "2px 8px",
+                fontSize: 12,
+                marginLeft: 6,
+              }}
+            >
+              {getIntelTypeConfig(hovered.type)?.shortLabel || hovered.type}
+            </span>
           </div>
-          <div style={{ fontSize: 13, margin: '6px 0' }}>{hovered.description}</div>
+          <div style={{ fontSize: 13, margin: "6px 0" }}>
+            {hovered.description}
+          </div>
           {hovered.image_url && (
-            <img src={hovered.image_url} alt={hovered.title} style={{ maxWidth: 180, maxHeight: 90, borderRadius: 8, marginTop: 6 }} />
+            <img
+              src={hovered.image_url}
+              alt={hovered.title}
+              style={{
+                maxWidth: 180,
+                maxHeight: 90,
+                borderRadius: 8,
+                marginTop: 6,
+              }}
+            />
           )}
         </div>
       )}
