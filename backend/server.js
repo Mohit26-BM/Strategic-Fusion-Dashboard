@@ -38,7 +38,11 @@ app.use(express.json());
 // --------------------
 // Config (validated)
 // --------------------
-const uri = process.env.MONGO_URI || "mongodb://localhost:27017";
+const uri = process.env.MONGO_URI;
+
+if (!uri) {
+  throw new Error("MONGO_URI not set");
+}
 const rawDbName = process.env.MONGO_DB || "intel_db";
 const port = process.env.PORT ? Number(process.env.PORT) : 5000;
 
