@@ -195,7 +195,11 @@ function MapView({
         />
 
         {/* Markers */}
-        <MarkerClusterGroup>
+        <MarkerClusterGroup
+          spiderfyOnMaxZoom={true}
+          showCoverageOnHover={false}
+          zoomToBoundsOnClick={true}
+        >
           {renderedPoints.map((point, i) => {
             const typeConfig = getIntelTypeConfig(point.type);
             const isSelected = isSameNode(point, selectedNode);
@@ -206,14 +210,15 @@ function MapView({
                 position={[point.lat, point.lng]}
                 icon={markerIcons[point.type] || markerIcons.OSINT}
                 eventHandlers={{
-                  click: () => {
-                    console.log("🔥 MARKER CLICKED:", point);
+                  click: (e) => {
+                    console.log("🔥 MARKER CLICKED (LEAFLET):", point);
 
                     if (typeof onNodeClick === "function") {
-                      const updated = { ...point, _timestamp: Date.now() };
-                      console.log("➡️ SENDING TO APP:", updated);
-                      onNodeClick(updated);
+                      onNodeClick({ ...point, _timestamp: Date.now() });
                     }
+
+                    // prevent cluster swallowing event
+                    e.originalEvent?.stopPropagation?.();
                   },
                   mouseover: () => setHovered(point),
                   mouseout: () => setHovered(null),
