@@ -164,6 +164,11 @@ function MapView({
 
   return (
     <div style={{ position: "relative", height: "100%", width: "100%" }}>
+      {/* DEBUG OVERLAY: Show number of rendered points and selectedNode info */}
+      <div style={{ position: 'absolute', top: 8, left: 8, zIndex: 3000, background: 'rgba(0,0,0,0.7)', color: '#fff', padding: 8, borderRadius: 8, fontSize: 13 }}>
+        <div>Rendered points: {renderedPoints.length}</div>
+        <div>selectedNode: {selectedNode ? (selectedNode._id || selectedNode.title) : 'none'}</div>
+      </div>
       <MapContainer
         center={mapCenter}
         zoom={terrainEnabled ? 8 : 5}
@@ -213,8 +218,8 @@ function MapView({
               >
                 {/* Navigation Emoji/Marker: show as a clickable button in popup */}
                 <Popup>
-                  <a
-                    href="#"
+                  <button
+                    type="button"
                     style={{
                       background: "none",
                       border: "none",
@@ -226,20 +231,23 @@ function MapView({
                     }}
                     title="Open dossier"
                     tabIndex={0}
-                    onClick={function(e) {
-                      e.preventDefault();
-                      window.alert('🧭 Navigation emoji clicked!');
-                      if (typeof onNodeClick === 'function') onNodeClick(point);
+                    onClick={function (e) {
+                      window.alert("🧭 Navigation emoji clicked!");
+                      if (typeof onNodeClick === "function") onNodeClick(point);
                       // Close the popup after click
-                      var popup = e.target.closest('.leaflet-popup');
+                      var popup = e.target.closest(".leaflet-popup");
                       if (popup) {
-                        var closeBtn = popup.querySelector('.leaflet-popup-close-button');
+                        var closeBtn = popup.querySelector(
+                          ".leaflet-popup-close-button",
+                        );
                         if (closeBtn) closeBtn.click();
                       }
                     }}
                   >
-                    <span role="img" aria-label="navigation">🧭</span>
-                  </a>
+                    <span role="img" aria-label="navigation">
+                      🧭
+                    </span>
+                  </button>
                   <b>{point.title}</b>
                   <br />
                   {point.description}
