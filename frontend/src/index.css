@@ -52,6 +52,7 @@ code {
   border-right: 1px solid rgba(135, 163, 191, 0.14);
   background: rgba(7, 16, 24, 0.92);
   backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   z-index: 30;
 }
 
@@ -197,6 +198,7 @@ code {
   color: #dce5ee;
   border: 1px solid rgba(135, 163, 191, 0.14);
   backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   padding: 10px 14px;
   border-radius: 999px;
   font-size: 12px;
@@ -215,10 +217,17 @@ code {
   border-radius: 14px;
   border: 1px solid rgba(135, 163, 191, 0.14);
   backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 .map-empty-state {
   position: absolute;
+  /* Fallback for Safari < 14.5 */
+  top: auto;
+  right: 18px;
+  bottom: 18px;
+  left: auto;
+  /* Modern browsers */
   inset: auto 18px 18px auto;
   width: min(360px, calc(100% - 36px));
   padding: 16px;
@@ -226,6 +235,7 @@ code {
   background: rgba(7, 16, 24, 0.9);
   border: 1px solid rgba(135, 163, 191, 0.14);
   backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   color: #eef5fb;
   z-index: 1200;
 }
@@ -264,9 +274,13 @@ code {
   border-radius: 16px;
   border: 1px solid rgba(135, 163, 191, 0.14);
   backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   z-index: 2000;
+  pointer-events: none;
 }
-
+.dossier-panel * {
+  pointer-events: auto;
+}
 .dossier-title {
   margin: 0 0 12px;
   font-size: 22px;
@@ -388,11 +402,18 @@ code {
     padding: 10px 14px;
     cursor: pointer;
     backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
   }
 
   .app-sidebar-scrim.is-visible {
     display: block;
     position: fixed;
+    /* Fallback for Safari < 14.5 */
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    /* Modern browsers */
     inset: 0;
     background: rgba(3, 8, 12, 0.54);
     z-index: 35;
