@@ -39,7 +39,7 @@ function App() {
     try {
       return JSON.parse(savedValue);
     } catch {
-      return DEFAULT_TERRAIN_CONFIG;f
+      return DEFAULT_TERRAIN_CONFIG;
     }
   });
 
