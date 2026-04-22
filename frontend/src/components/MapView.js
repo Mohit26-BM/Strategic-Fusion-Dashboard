@@ -198,7 +198,7 @@ function MapView({
         <MarkerClusterGroup
           spiderfyOnMaxZoom={true}
           showCoverageOnHover={false}
-          zoomToBoundsOnClick={true}
+          zoomToBoundsOnClick={false} // 🔥 IMPORTANT FIX
         >
           {renderedPoints.map((point, i) => {
             const typeConfig = getIntelTypeConfig(point.type);
@@ -211,14 +211,14 @@ function MapView({
                 icon={markerIcons[point.type] || markerIcons.OSINT}
                 eventHandlers={{
                   click: (e) => {
-                    console.log("🔥 MARKER CLICKED (LEAFLET):", point);
+                    // 🔥 CRITICAL: prevent cluster from hijacking click
+                    e.originalEvent?.stopPropagation?.();
+
+                    console.log("🔥 MARKER CLICKED:", point);
 
                     if (typeof onNodeClick === "function") {
                       onNodeClick({ ...point, _timestamp: Date.now() });
                     }
-
-                    // prevent cluster swallowing event
-                    e.originalEvent?.stopPropagation?.();
                   },
                   mouseover: () => setHovered(point),
                   mouseout: () => setHovered(null),
@@ -243,46 +243,33 @@ function MapView({
                         alignItems: "center",
                         justifyContent: "center",
                         gap: "8px",
-                        transition: "all 0.2s",
                       }}
-                      title="Open full dossier"
-                      tabIndex={0}
-                      onClick={function (e) {
+                      onClick={(e) => {
                         console.log("🟢 BUTTON CLICKED:", point);
 
                         if (typeof onNodeClick === "function") {
-                          const updated = { ...point, _timestamp: Date.now() };
-                          console.log("➡️ BUTTON SENDING:", updated);
-                          onNodeClick(updated);
+                          onNodeClick({ ...point, _timestamp: Date.now() });
                         }
 
-                        var popup = e.target.closest(".leaflet-popup");
+                        // close popup
+                        const popup = e.target.closest(".leaflet-popup");
                         if (popup) {
-                          var closeBtn = popup.querySelector(
+                          const closeBtn = popup.querySelector(
                             ".leaflet-popup-close-button",
                           );
                           if (closeBtn) closeBtn.click();
                         }
                       }}
-                      onMouseOver={(e) => {
-                        e.target.style.transform = "scale(1.05)";
-                        e.target.style.boxShadow = "0 4px 12px rgba(0,0,0,0.2)";
-                      }}
-                      onMouseOut={(e) => {
-                        e.target.style.transform = "scale(1)";
-                        e.target.style.boxShadow = "none";
-                      }}
                     >
-                      <span role="img" aria-label="navigation">
-                        🧭
-                      </span>
-                      <span>View Dossier</span>
+                      🧭 View Dossier
                     </button>
                   </div>
+
                   <b>{point.title}</b>
                   <br />
                   {point.description}
                 </Popup>
+
                 {isSelected && (
                   <CircleMarker
                     center={[point.lat, point.lng]}
