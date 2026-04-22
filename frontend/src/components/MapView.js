@@ -61,8 +61,16 @@ function FocusController({ focusRequest, terrainConfig, data }) {
     }
 
     // Focus on a specific node if requested
-    if (focusRequest.mode === "single" && Number.isFinite(focusRequest.lat) && Number.isFinite(focusRequest.lng)) {
-      map.flyTo([focusRequest.lat, focusRequest.lng], Math.max(map.getZoom(), 9), { duration: 0.75 });
+    if (
+      focusRequest.mode === "single" &&
+      Number.isFinite(focusRequest.lat) &&
+      Number.isFinite(focusRequest.lng)
+    ) {
+      map.flyTo(
+        [focusRequest.lat, focusRequest.lng],
+        Math.max(map.getZoom(), 9),
+        { animate: true, duration: 0.5, easeLinearity: 0.5 },
+      );
       return;
     }
 
@@ -74,9 +82,9 @@ function FocusController({ focusRequest, terrainConfig, data }) {
     if (!coords.length) return;
 
     if (coords.length === 1) {
-      map.flyTo(coords[0], Math.max(map.getZoom(), 9), { duration: 0.75 });
+      map.flyTo(coords[0], Math.max(map.getZoom(), 9), { animate: true, duration: 0.5, easeLinearity: 0.5 });
     } else {
-      map.flyToBounds(coords, { padding: [60, 60], duration: 0.75 });
+      map.flyToBounds(coords, { padding: [60, 60], animate: true, duration: 0.5, easeLinearity: 0.5 });
     }
   }, [focusRequest, map, terrainConfig, data]);
 
@@ -184,21 +192,34 @@ function MapView({
 
             return (
               <Marker
-                  key={point._id || `${point.lat}-${point.lng}-${i}`}
-                  position={[point.lat, point.lng]}
-                  icon={markerIcons[point.type] || markerIcons.OSINT}
-                  eventHandlers={{
-                    click: () => onNodeClick(point),
-                    mouseover: () => setHovered(point),
-                    mouseout: () => setHovered(null),
-                  }}
-                >
-                  {/* Navigation Emoji/Marker: show as a popup for clarity */}
-                  <Popup>
-                    <span role="img" aria-label="navigation">🧭</span> <b>{point.title}</b>
-                    <br />
-                    {point.description}
-                  </Popup>
+                key={point._id || `${point.lat}-${point.lng}-${i}`}
+                position={[point.lat, point.lng]}
+                icon={markerIcons[point.type] || markerIcons.OSINT}
+                eventHandlers={{
+                  click: () => onNodeClick(point),
+                  mouseover: () => setHovered(point),
+                  mouseout: () => setHovered(null),
+                }}
+              >
+                {/* Navigation Emoji/Marker: show as a clickable button in popup */}
+                <Popup>
+                  <button
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      fontSize: "22px",
+                      marginRight: "8px",
+                    }}
+                    title="Open dossier"
+                    onClick={() => onNodeClick(point)}
+                  >
+                    <span role="img" aria-label="navigation">🧭</span>
+                  </button>
+                  <b>{point.title}</b>
+                  <br />
+                  {point.description}
+                </Popup>
                 {isSelected && (
                   <CircleMarker
                     center={[point.lat, point.lng]}
@@ -211,12 +232,6 @@ function MapView({
                     }}
                   />
                 )}
-
-                <Popup>
-                  <b>{point.title}</b>
-                  <br />
-                  {point.description}
-                </Popup>
               </Marker>
             );
           })}
