@@ -209,6 +209,7 @@ code {
   position: absolute;
   top: 15px;
   right: 15px;
+  pointer-events: none;
   z-index: 1500;
   width: 240px;
   background: rgba(7, 16, 24, 0.88);
@@ -253,6 +254,7 @@ code {
   margin: 0 0 8px;
   font-size: 18px;
 }
+
 
 .map-empty-copy {
   margin: 0;
