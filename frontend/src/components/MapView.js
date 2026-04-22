@@ -164,11 +164,6 @@ function MapView({
 
   return (
     <div style={{ position: "relative", height: "100%", width: "100%" }}>
-      {/* DEBUG OVERLAY: Show number of rendered points and selectedNode info */}
-      <div style={{ position: 'absolute', top: 8, left: 8, zIndex: 3000, background: 'rgba(0,0,0,0.7)', color: '#fff', padding: 8, borderRadius: 8, fontSize: 13 }}>
-        <div>Rendered points: {renderedPoints.length}</div>
-        <div>selectedNode: {selectedNode ? (selectedNode._id || selectedNode.title) : 'none'}</div>
-      </div>
       <MapContainer
         center={mapCenter}
         zoom={terrainEnabled ? 8 : 5}
@@ -211,43 +206,62 @@ function MapView({
                 position={[point.lat, point.lng]}
                 icon={markerIcons[point.type] || markerIcons.OSINT}
                 eventHandlers={{
-                  click: () => onNodeClick(point),
                   mouseover: () => setHovered(point),
                   mouseout: () => setHovered(null),
                 }}
               >
-                {/* Navigation Emoji/Marker: show as a clickable button in popup */}
                 <Popup>
-                  <button
-                    type="button"
-                    style={{
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      fontSize: "22px",
-                      marginRight: "8px",
-                      textDecoration: "none",
-                      outline: "none",
-                    }}
-                    title="Open dossier"
-                    tabIndex={0}
-                    onClick={function (e) {
-                      // Deep clone to force React state update
-                      if (typeof onNodeClick === "function") onNodeClick(JSON.parse(JSON.stringify(point)));
-                      // Close the popup after click
-                      var popup = e.target.closest(".leaflet-popup");
-                      if (popup) {
-                        var closeBtn = popup.querySelector(
-                          ".leaflet-popup-close-button",
-                        );
-                        if (closeBtn) closeBtn.click();
-                      }
-                    }}
-                  >
-                    <span role="img" aria-label="navigation">
-                      🧭
-                    </span>
-                  </button>
+                  <div style={{ textAlign: "center" }}>
+                    <button
+                      type="button"
+                      style={{
+                        background: typeConfig.color || "#4A90E2",
+                        border: "none",
+                        borderRadius: "8px",
+                        cursor: "pointer",
+                        fontSize: "16px",
+                        padding: "8px 16px",
+                        color: "#fff",
+                        fontWeight: "600",
+                        marginBottom: "8px",
+                        width: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "8px",
+                        transition: "all 0.2s",
+                      }}
+                      title="Open full dossier"
+                      tabIndex={0}
+                      onClick={function (e) {
+                        // Force new object reference to ensure React state update
+                        if (typeof onNodeClick === "function") {
+                          onNodeClick({ ...point, _timestamp: Date.now() });
+                        }
+                        // Close the popup after click
+                        var popup = e.target.closest(".leaflet-popup");
+                        if (popup) {
+                          var closeBtn = popup.querySelector(
+                            ".leaflet-popup-close-button",
+                          );
+                          if (closeBtn) closeBtn.click();
+                        }
+                      }}
+                      onMouseOver={(e) => {
+                        e.target.style.transform = "scale(1.05)";
+                        e.target.style.boxShadow = "0 4px 12px rgba(0,0,0,0.2)";
+                      }}
+                      onMouseOut={(e) => {
+                        e.target.style.transform = "scale(1)";
+                        e.target.style.boxShadow = "none";
+                      }}
+                    >
+                      <span role="img" aria-label="navigation">
+                        🧭
+                      </span>
+                      <span>View Dossier</span>
+                    </button>
+                  </div>
                   <b>{point.title}</b>
                   <br />
                   {point.description}
