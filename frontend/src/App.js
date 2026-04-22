@@ -116,7 +116,7 @@ function App() {
       type: options.activeType || "all",
     });
 
-    // Focus on node if requested
+    // Focus on node if requested (but do NOT auto-open dossier)
     if (options.shouldFocus && options.focusNode) {
       setMapFocusRequest({
         mode: "single",
@@ -124,7 +124,7 @@ function App() {
         lng: options.focusNode.lng,
         timestamp: Date.now(),
       });
-      setSelectedNode(options.focusNode);
+      // Do NOT setSelectedNode here; only set on marker click
     } else if (options.shouldFocus && options.activeType !== "all") {
       setMapFocusRequest({
         type: options.activeType,
@@ -261,7 +261,10 @@ function App() {
           source={source}
         />
 
-        <Legend count={filteredData.length} data={filteredData} />
+        {/* Legend in a fixed overlay slot for visibility */}
+        <div style={{ position: "absolute", top: 20, right: 20, zIndex: 1000 }}>
+          <Legend count={filteredData.length} data={filteredData} />
+        </div>
 
         <div className="map-status-pill">
           Live View: {filteredData.length} nodes ({source})
