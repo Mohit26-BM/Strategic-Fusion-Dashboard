@@ -60,13 +60,20 @@ function FocusController({ focusRequest, terrainConfig, data }) {
       return;
     }
 
+    // Focus on a specific node if requested
+    if (focusRequest.mode === "single" && Number.isFinite(focusRequest.lat) && Number.isFinite(focusRequest.lng)) {
+      map.flyTo([focusRequest.lat, focusRequest.lng], Math.max(map.getZoom(), 9), { duration: 0.75 });
+      return;
+    }
+
+    // Otherwise, focus on all filtered nodes
     const coords = data
       .filter((n) => Number.isFinite(n.lat) && Number.isFinite(n.lng))
       .map((n) => [n.lat, n.lng]);
 
     if (!coords.length) return;
 
-    if (coords.length === 1 || focusRequest.mode === "single") {
+    if (coords.length === 1) {
       map.flyTo(coords[0], Math.max(map.getZoom(), 9), { duration: 0.75 });
     } else {
       map.flyToBounds(coords, { padding: [60, 60], duration: 0.75 });
@@ -114,7 +121,7 @@ function MapView({
   const [hovered, setHovered] = useState(null);
 
   const terrainEnabled = Boolean(
-    terrainConfig?.enabled && terrainConfig?.imageUrl
+    terrainConfig?.enabled && terrainConfig?.imageUrl,
   );
 
   const terrainBounds = terrainEnabled
@@ -134,7 +141,7 @@ function MapView({
   // Only valid points
   const renderedPoints = useMemo(
     () => data.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng)),
-    [data]
+    [data],
   );
 
   return (
