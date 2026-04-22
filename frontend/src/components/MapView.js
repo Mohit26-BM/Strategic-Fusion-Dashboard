@@ -232,8 +232,8 @@ function MapView({
                     title="Open dossier"
                     tabIndex={0}
                     onClick={function (e) {
-                      window.alert("🧭 Navigation emoji clicked!");
-                      if (typeof onNodeClick === "function") onNodeClick(point);
+                      // Deep clone to force React state update
+                      if (typeof onNodeClick === "function") onNodeClick(JSON.parse(JSON.stringify(point)));
                       // Close the popup after click
                       var popup = e.target.closest(".leaflet-popup");
                       if (popup) {
