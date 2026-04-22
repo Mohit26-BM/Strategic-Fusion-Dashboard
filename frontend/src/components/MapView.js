@@ -1,8 +1,4 @@
-// --------------------
-// Imports (ALL at top)
-// --------------------
 import { useEffect, useMemo, useState } from "react";
-
 import {
   MapContainer,
   TileLayer,
@@ -27,9 +23,7 @@ import iconUrl from "leaflet/dist/images/marker-icon.png";
 import iconRetinaUrl from "leaflet/dist/images/marker-icon-2x.png";
 import shadowUrl from "leaflet/dist/images/marker-shadow.png";
 
-// --------------------
-// Leaflet icon fix
-// --------------------
+// Fix Leaflet icon issue
 delete L.Icon.Default.prototype._getIconUrl;
 
 L.Icon.Default.mergeOptions({
@@ -39,55 +33,52 @@ L.Icon.Default.mergeOptions({
 });
 
 // --------------------
-// Helpers
+// Helper (safe comparison)
 // --------------------
-function isSameNode(left, right) {
-  if (!left || !right) return false;
+function isSameNode(a, b) {
+  if (!a || !b) return false;
 
   return (
-    left.lat === right.lat &&
-    left.lng === right.lng &&
-    left.title === right.title &&
-    left.type === right.type
+    Math.abs(a.lat - b.lat) < 0.0001 &&
+    Math.abs(a.lng - b.lng) < 0.0001 &&
+    a.title === b.title &&
+    a.type === b.type
   );
 }
 
 // --------------------
-// UI Components
+// Focus Controller (FIXED)
 // --------------------
-function HelpButton() {
-  return (
-    <a
-      href="/help.html"
-      target="_blank"
-      rel="noopener noreferrer"
-      style={{
-        position: "absolute",
-        top: 18,
-        right: 18,
-        zIndex: 1200,
-        background: "#2A81CB",
-        color: "#fff",
-        borderRadius: "50%",
-        width: 38,
-        height: 38,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: 24,
-        fontWeight: 700,
-        boxShadow: "0 2px 8px #0005",
-        textDecoration: "none",
-        border: "2px solid #fff",
-        cursor: "pointer",
-      }}
-      title="Help: About & Usage"
-    >
-      ?
-    </a>
-  );
+function FocusController({ focusRequest, terrainConfig, data }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!focusRequest) {
+      if (!terrainConfig?.enabled) {
+        map.setMaxBounds(null);
+      }
+      return;
+    }
+
+    const coords = data
+      .filter((n) => Number.isFinite(n.lat) && Number.isFinite(n.lng))
+      .map((n) => [n.lat, n.lng]);
+
+    if (!coords.length) return;
+
+    if (coords.length === 1 || focusRequest.mode === "single") {
+      map.flyTo(coords[0], Math.max(map.getZoom(), 9), { duration: 0.75 });
+    } else {
+      map.flyToBounds(coords, { padding: [60, 60], duration: 0.75 });
+    }
+  }, [focusRequest, map, terrainConfig, data]);
+
+  return null;
 }
 
+// --------------------
+// Terrain Controller
+// --------------------
 function TerrainViewport({ terrainConfig }) {
   const map = useMap();
   const enabled = Boolean(terrainConfig?.enabled && terrainConfig?.imageUrl);
@@ -110,33 +101,6 @@ function TerrainViewport({ terrainConfig }) {
   return null;
 }
 
-function FocusController({ focusRequest, terrainConfig }) {
-  const map = useMap();
-
-  useEffect(() => {
-    if (!focusRequest?.nodes?.length) {
-      if (!terrainConfig?.enabled) {
-        map.setMaxBounds(null);
-      }
-      return;
-    }
-
-    const coords = focusRequest.nodes
-      .filter((n) => Number.isFinite(n.lat) && Number.isFinite(n.lng))
-      .map((n) => [n.lat, n.lng]);
-
-    if (!coords.length) return;
-
-    if (coords.length === 1 || focusRequest.mode === "single") {
-      map.flyTo(coords[0], Math.max(map.getZoom(), 9), { duration: 0.75 });
-    } else {
-      map.flyToBounds(coords, { padding: [60, 60], duration: 0.75 });
-    }
-  }, [focusRequest, map, terrainConfig]);
-
-  return null;
-}
-
 // --------------------
 // Main Component
 // --------------------
@@ -150,7 +114,7 @@ function MapView({
   const [hovered, setHovered] = useState(null);
 
   const terrainEnabled = Boolean(
-    terrainConfig?.enabled && terrainConfig?.imageUrl,
+    terrainConfig?.enabled && terrainConfig?.imageUrl
   );
 
   const terrainBounds = terrainEnabled
@@ -167,25 +131,26 @@ function MapView({
       ]
     : [20.5937, 78.9629];
 
+  // Only valid points
   const renderedPoints = useMemo(
     () => data.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng)),
-    [data],
+    [data]
   );
 
   return (
     <div style={{ position: "relative", height: "100%", width: "100%" }}>
-      <HelpButton />
-
       <MapContainer
         center={mapCenter}
         zoom={terrainEnabled ? 8 : 5}
         maxZoom={19}
         style={{ height: "100%", width: "100%" }}
       >
+        {/* Base map */}
         {(!terrainEnabled || terrainConfig.showBaseMap) && (
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
         )}
 
+        {/* Terrain overlay */}
         {terrainEnabled && (
           <>
             <ImageOverlay
@@ -197,11 +162,14 @@ function MapView({
           </>
         )}
 
+        {/* Focus logic */}
         <FocusController
           focusRequest={focusRequest}
           terrainConfig={terrainConfig}
+          data={data}
         />
 
+        {/* Markers */}
         <MarkerClusterGroup>
           {renderedPoints.map((point, i) => {
             const typeConfig = getIntelTypeConfig(point.type);
@@ -209,7 +177,7 @@ function MapView({
 
             return (
               <Marker
-                key={`${point.title}-${i}`}
+                key={point._id || `${point.lat}-${point.lng}-${i}`}
                 position={[point.lat, point.lng]}
                 icon={markerIcons[point.type] || markerIcons.OSINT}
                 eventHandlers={{
@@ -242,6 +210,7 @@ function MapView({
         </MarkerClusterGroup>
       </MapContainer>
 
+      {/* Hover card */}
       {hovered && (
         <div className="map-hover-card">
           <strong>{hovered.title}</strong>
