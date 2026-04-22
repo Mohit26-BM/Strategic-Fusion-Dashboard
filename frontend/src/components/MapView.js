@@ -206,6 +206,11 @@ function MapView({
                 position={[point.lat, point.lng]}
                 icon={markerIcons[point.type] || markerIcons.OSINT}
                 eventHandlers={{
+                  click: () => {
+                    if (typeof onNodeClick === "function") {
+                      onNodeClick({ ...point, _timestamp: Date.now() });
+                    }
+                  },
                   mouseover: () => setHovered(point),
                   mouseout: () => setHovered(null),
                 }}
