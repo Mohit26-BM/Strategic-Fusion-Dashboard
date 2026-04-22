@@ -12,7 +12,7 @@ function FilterPanel({ data, onFilter = () => {} }) {
   // Available sources
   const availableSources = useMemo(() => {
     const sources = Array.from(
-      new Set(data.map((d) => d.source).filter(Boolean))
+      new Set(data.map((d) => d.source).filter(Boolean)),
     );
     return ["all", ...sources];
   }, [data]);
@@ -29,7 +29,10 @@ function FilterPanel({ data, onFilter = () => {} }) {
       setFilters((prev) => ({ ...prev, type: "all" }));
     }
 
-    if (filters.source !== "all" && !availableSources.includes(filters.source)) {
+    if (
+      filters.source !== "all" &&
+      !availableSources.includes(filters.source)
+    ) {
       setFilters((prev) => ({ ...prev, source: "all" }));
     }
   }, [availableTypes, availableSources, filters.type, filters.source]);
@@ -47,7 +50,7 @@ function FilterPanel({ data, onFilter = () => {} }) {
     if (filters.type !== "all") {
       filtered = filtered.filter(
         (d) =>
-          d.type?.trim().toUpperCase() === filters.type.trim().toUpperCase()
+          d.type?.trim().toUpperCase() === filters.type.trim().toUpperCase(),
       );
     }
 
@@ -60,7 +63,8 @@ function FilterPanel({ data, onFilter = () => {} }) {
       filtered = filtered.filter(
         (d) =>
           d.title?.toLowerCase().includes(term) ||
-          d.description?.toLowerCase().includes(term)
+          d.description?.toLowerCase().includes(term) ||
+          d.city?.toLowerCase().includes(term)
       );
     }
 
@@ -72,6 +76,7 @@ function FilterPanel({ data, onFilter = () => {} }) {
         shouldFocus: true,
         search: filters.searchTerm,
         activeType: filters.type,
+        focusNode: filtered[0],
       });
     }
   }, [filters, data, onFilter]);
@@ -107,9 +112,7 @@ function FilterPanel({ data, onFilter = () => {} }) {
         type="text"
         placeholder="Search title or description..."
         value={filters.searchTerm}
-        onChange={(e) =>
-          setFilters({ ...filters, searchTerm: e.target.value })
-        }
+        onChange={(e) => setFilters({ ...filters, searchTerm: e.target.value })}
       />
 
       {/* Source */}
@@ -117,9 +120,7 @@ function FilterPanel({ data, onFilter = () => {} }) {
         <select
           style={inputStyle}
           value={filters.source}
-          onChange={(e) =>
-            setFilters({ ...filters, source: e.target.value })
-          }
+          onChange={(e) => setFilters({ ...filters, source: e.target.value })}
         >
           {availableSources.map((src) => (
             <option key={src} value={src}>
@@ -130,7 +131,13 @@ function FilterPanel({ data, onFilter = () => {} }) {
       )}
 
       {/* Summary */}
-      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10 }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          marginTop: 10,
+        }}
+      >
         <div style={summaryStyle}>
           Showing {filteredCount} of {data.length}
         </div>
