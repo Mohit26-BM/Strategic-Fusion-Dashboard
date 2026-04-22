@@ -207,8 +207,12 @@ function MapView({
                 icon={markerIcons[point.type] || markerIcons.OSINT}
                 eventHandlers={{
                   click: () => {
+                    console.log("🔥 MARKER CLICKED:", point);
+
                     if (typeof onNodeClick === "function") {
-                      onNodeClick({ ...point, _timestamp: Date.now() });
+                      const updated = { ...point, _timestamp: Date.now() };
+                      console.log("➡️ SENDING TO APP:", updated);
+                      onNodeClick(updated);
                     }
                   },
                   mouseover: () => setHovered(point),
@@ -239,11 +243,14 @@ function MapView({
                       title="Open full dossier"
                       tabIndex={0}
                       onClick={function (e) {
-                        // Force new object reference to ensure React state update
+                        console.log("🟢 BUTTON CLICKED:", point);
+
                         if (typeof onNodeClick === "function") {
-                          onNodeClick({ ...point, _timestamp: Date.now() });
+                          const updated = { ...point, _timestamp: Date.now() };
+                          console.log("➡️ BUTTON SENDING:", updated);
+                          onNodeClick(updated);
                         }
-                        // Close the popup after click
+
                         var popup = e.target.closest(".leaflet-popup");
                         if (popup) {
                           var closeBtn = popup.querySelector(
