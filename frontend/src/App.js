@@ -39,7 +39,7 @@ function App() {
     try {
       return JSON.parse(savedValue);
     } catch {
-      return DEFAULT_TERRAIN_CONFIG;
+      return DEFAULT_TERRAIN_CONFIG;f
     }
   });
 
@@ -262,7 +262,7 @@ function App() {
         />
 
         {/* Legend in a fixed overlay slot for visibility */}
-        <div style={{ position: "absolute", top: 20, right: 20, zIndex: 1000 }}>
+        <div style={{ position: "absolute", bottom: 20, right: 20, zIndex: 1000 }}>
           <Legend count={filteredData.length} data={filteredData} />
         </div>
 
