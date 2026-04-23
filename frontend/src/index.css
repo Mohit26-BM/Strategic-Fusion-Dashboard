@@ -503,8 +503,3 @@ code {
     opacity: 0.8;
   }
 }
-
-button:hover {
-  transform: translateY(-2px) !important;
-  box-shadow: 0 12px 32px rgba(102, 126, 234, 0.6) !important;
-}
