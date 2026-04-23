@@ -3,11 +3,9 @@ require("dotenv").config();
 const { MongoClient } = require("mongodb");
 const axios = require("axios");
 
-// ❗ MUST come from environment variables (Render / local .env)
 const uri = process.env.MONGO_URI;
 const dbName = process.env.MONGO_DB || "intel_db";
 
-// Basic safety check
 if (!uri) {
   throw new Error("MONGO_URI is not defined in environment variables");
 }
@@ -16,7 +14,6 @@ const client = new MongoClient(uri, {
   serverSelectionTimeoutMS: 5000,
 });
 
-// Small delay to avoid API rate limits
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function getCity(lat, lng) {
@@ -26,18 +23,21 @@ async function getCity(lat, lng) {
       {
         params: { lat, lon: lng, format: "json" },
         headers: { "User-Agent": "intel-dashboard" },
-      }
+      },
     );
 
     return (
       res.data.address.city ||
       res.data.address.town ||
+      res.data.address.village ||
+      res.data.address.municipality ||
+      res.data.address.county ||
       res.data.address.state ||
-      "Unknown"
+      ""
     );
   } catch (err) {
     console.error("Geocoding failed:", err.message);
-    return "Unknown";
+    return "";
   }
 }
 
@@ -65,21 +65,18 @@ async function run() {
         {
           $set: {
             city,
-            title: `${city} - ${doc.title || ""}`,
-            description: `${city}: ${doc.description || ""}`,
           },
-        }
+        },
       );
 
-      console.log("Updated:", doc._id, city);
+      console.log("Updated:", doc._id, city || "No city found");
 
-      // avoid rate limiting
       await delay(1000);
     }
 
-    console.log("✅ Done updating all documents");
+    console.log("Done updating all documents");
   } catch (err) {
-    console.error("❌ Script failed:", err.message);
+    console.error("Script failed:", err.message);
   } finally {
     await client.close();
     process.exit(0);
