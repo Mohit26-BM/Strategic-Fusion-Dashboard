@@ -189,6 +189,32 @@ code {
   z-index: 1000;
 }
 
+.map-help-button {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  z-index: 1400;
+  display: inline-grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(124, 199, 255, 0.34);
+  border-radius: 999px;
+  background: rgba(7, 16, 24, 0.9);
+  color: #e8f6ff;
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.28);
+  text-decoration: none;
+  font-size: 20px;
+  font-weight: 800;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.map-help-button:hover {
+  background: rgba(63, 178, 255, 0.18);
+}
+
 .map-status-pill {
   position: absolute;
   left: 18px;
@@ -222,12 +248,10 @@ code {
 
 .map-empty-state {
   position: absolute;
-  /* Fallback for Safari < 14.5 */
   top: auto;
   right: 18px;
   bottom: 18px;
   left: auto;
-  /* Modern browsers */
   inset: auto 18px 18px auto;
   width: min(360px, calc(100% - 36px));
   padding: 16px;
@@ -562,7 +586,6 @@ code {
   .app-sidebar-scrim.is-visible {
     display: block;
     position: fixed;
-    /* Fallback for Safari < 14.5 */
     top: 0;
     right: 0;
     bottom: 0;
@@ -599,6 +622,12 @@ code {
     top: 68px;
     right: 12px;
     width: min(240px, calc(100% - 24px));
+  }
+
+  .map-help-button {
+    top: 14px;
+    left: 14px;
+    transform: none;
   }
 
   .map-legend-slot {
