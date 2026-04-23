@@ -287,6 +287,38 @@ code {
   line-height: 1.2;
 }
 
+.dossier-action-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.dossier-action-button {
+  border: 1px solid rgba(124, 199, 255, 0.28);
+  background: rgba(63, 178, 255, 0.14);
+  color: #e8f6ff;
+  border-radius: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.dossier-action-button:hover {
+  background: rgba(63, 178, 255, 0.22);
+}
+
+.dossier-action-button--danger {
+  border-color: rgba(255, 119, 119, 0.28);
+  background: rgba(255, 91, 91, 0.12);
+  color: #ffd6d6;
+}
+
+.dossier-action-button--danger:hover {
+  background: rgba(255, 91, 91, 0.2);
+}
+
 .dossier-empty-copy {
   margin: 0 0 14px;
   color: #8da1b5;
@@ -372,6 +404,128 @@ code {
 .mobile-drawer-toggle,
 .app-sidebar-scrim {
   display: none;
+}
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(2, 7, 11, 0.66);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.dialog-card {
+  width: min(430px, 100%);
+  max-height: calc(100dvh - 36px);
+  overflow-y: auto;
+  border: 1px solid rgba(135, 163, 191, 0.18);
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(17, 27, 38, 0.98), rgba(7, 16, 24, 0.98));
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.48);
+  color: #eef5fb;
+  padding: 22px;
+}
+
+.dialog-card--wide {
+  width: min(560px, 100%);
+}
+
+.dialog-card--success {
+  border-color: rgba(74, 222, 128, 0.28);
+}
+
+.dialog-card--error {
+  border-color: rgba(248, 113, 113, 0.34);
+}
+
+.dialog-kicker {
+  margin: 0 0 8px;
+  color: #7cc7ff;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.dialog-title {
+  margin: 0 0 10px;
+  color: #f3f7fb;
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.dialog-copy {
+  margin: 0;
+  color: #a9b8c8;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.dialog-button {
+  border: 1px solid rgba(135, 163, 191, 0.18);
+  background: rgba(10, 19, 28, 0.92);
+  color: #dce5ee;
+  border-radius: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.dialog-button--primary {
+  border-color: rgba(124, 199, 255, 0.34);
+  background: rgba(63, 178, 255, 0.18);
+  color: #e8f6ff;
+}
+
+.dialog-button--danger {
+  border-color: rgba(255, 119, 119, 0.34);
+  background: rgba(255, 91, 91, 0.16);
+  color: #ffd6d6;
+}
+
+.dialog-field,
+.dialog-field-grid {
+  margin-top: 12px;
+}
+
+.dialog-field {
+  display: grid;
+  gap: 7px;
+}
+
+.dialog-field span {
+  color: #8da1b5;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.dialog-field input,
+.dialog-field select,
+.dialog-field textarea {
+  width: 100%;
+  border: 1px solid rgba(135, 163, 191, 0.18);
+  border-radius: 12px;
+  background: #0b141d;
+  color: #edf3f8;
+  padding: 10px 12px;
+}
+
+.dialog-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
 @media (max-width: 1180px) {
@@ -473,6 +627,19 @@ code {
   .dossier-panel {
     bottom: 88px;
     max-height: 46vh;
+  }
+
+  .dossier-action-row,
+  .dialog-field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dialog-actions {
+    flex-direction: column-reverse;
+  }
+
+  .dialog-button {
+    width: 100%;
   }
 
   .map-empty-state {
