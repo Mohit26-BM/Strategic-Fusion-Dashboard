@@ -29,23 +29,6 @@ L.Icon.Default.mergeOptions({
   shadowUrl,
 });
 
-function isSameNode(a, b) {
-  if (!a || !b) {
-    return false;
-  }
-
-  if (a._id && b._id) {
-    return a._id === b._id;
-  }
-
-  return (
-    Math.abs(Number(a.lat) - Number(b.lat)) < 0.0001 &&
-    Math.abs(Number(a.lng) - Number(b.lng)) < 0.0001 &&
-    a.title === b.title &&
-    a.type === b.type
-  );
-}
-
 function TerrainViewport({ terrainConfig }) {
   const map = useMap();
   const enabled = Boolean(terrainConfig?.enabled && terrainConfig?.imageUrl);
@@ -120,7 +103,7 @@ function FocusController({ focusRequest, terrainConfig, data }) {
   return null;
 }
 
-function DossierPopupButton({ point, onNodeClick, color }) {
+function DossierPopupButton({ point, onSelectNode, color }) {
   return (
     <button
       type="button"
@@ -136,11 +119,7 @@ function DossierPopupButton({ point, onNodeClick, color }) {
         marginBottom: "10px",
         width: "100%",
       }}
-      onClick={() => {
-        if (typeof onNodeClick === "function") {
-          onNodeClick(point);
-        }
-      }}
+      onClick={() => onSelectNode(point)}
     >
       View Dossier
     </button>
@@ -155,6 +134,12 @@ function MapView({
   focusRequest,
 }) {
   const [hovered, setHovered] = useState(null);
+
+  const handleSelectNode = (point) => {
+    if (typeof onNodeClick === "function") {
+      onNodeClick({ ...point, _selectedAt: Date.now() });
+    }
+  };
 
   const terrainEnabled = Boolean(
     terrainConfig?.enabled && terrainConfig?.imageUrl,
@@ -215,7 +200,6 @@ function MapView({
         >
           {renderedPoints.map((point, index) => {
             const typeConfig = getIntelTypeConfig(point.type);
-            const isSelected = isSameNode(point, selectedNode);
 
             return (
               <Marker
@@ -223,11 +207,8 @@ function MapView({
                 position={[point.lat, point.lng]}
                 icon={markerIcons[point.type] || markerIcons.OSINT}
                 eventHandlers={{
-                  click: () => {
-                    if (typeof onNodeClick === "function") {
-                      onNodeClick(point);
-                    }
-                  },
+                  click: () => handleSelectNode(point),
+                  popupopen: () => handleSelectNode(point),
                   mouseover: () => setHovered(point),
                   mouseout: () => setHovered(null),
                 }}
@@ -236,7 +217,7 @@ function MapView({
                   <div style={{ minWidth: "220px" }}>
                     <DossierPopupButton
                       point={point}
-                      onNodeClick={onNodeClick}
+                      onSelectNode={handleSelectNode}
                       color={typeConfig.color}
                     />
 
@@ -260,22 +241,25 @@ function MapView({
                   </div>
                 </Popup>
 
-                {isSelected && (
-                  <CircleMarker
-                    center={[point.lat, point.lng]}
-                    radius={18}
-                    pathOptions={{
-                      color: "#ffffff",
-                      weight: 2,
-                      fillColor: typeConfig.color,
-                      fillOpacity: 0.2,
-                    }}
-                  />
-                )}
               </Marker>
             );
           })}
         </MarkerClusterGroup>
+
+        {selectedNode &&
+          Number.isFinite(selectedNode.lat) &&
+          Number.isFinite(selectedNode.lng) && (
+            <CircleMarker
+              center={[selectedNode.lat, selectedNode.lng]}
+              radius={18}
+              pathOptions={{
+                color: "#ffffff",
+                weight: 2,
+                fillColor: getIntelTypeConfig(selectedNode.type).color,
+                fillOpacity: 0.2,
+              }}
+            />
+          )}
       </MapContainer>
 
       {!renderedPoints.length && (
