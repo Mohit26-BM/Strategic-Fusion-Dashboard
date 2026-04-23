@@ -2,6 +2,8 @@
 
 A web-based intelligence dashboard for building a common operating picture across geospatial intelligence feeds. The project combines a React frontend, a Leaflet map interface, and a small Express/MongoDB backend for storing and retrieving intelligence nodes.
 
+![Strategic Fusion Dashboard](docs/dashboard.png)
+
 ## Overview
 
 This dashboard is designed to bring multiple intelligence streams into one interactive map-driven workspace. It supports:
@@ -16,21 +18,25 @@ The main workflow is:
 1. Ingest intelligence data from MongoDB or local files.
 2. Render each record as a geospatial marker.
 3. Inspect imagery and metadata through hover cards, marker popups, and the dossier panel.
-4. Filter visible intelligence and automatically move the map to the matching node set.
-5. Optionally anchor the map to a fixed terrain image instead of relying only on the standard base map.
+4. Edit or delete selected records directly from the dossier panel.
+5. Filter visible intelligence and automatically move the map to the matching node set.
+6. Optionally anchor the map to a fixed terrain image instead of relying only on the standard base map.
 
 ## Current Features
 
 - MongoDB-backed intelligence retrieval from the backend API
 - Manual and bulk intelligence node creation, persisted to MongoDB
-- City detection and storage for nodes using OpenStreetMap reverse geocoding (auto-populates city, city-aware title/description)
+- Update and delete support for existing MongoDB-backed nodes
+- City detection and storage for nodes using OpenStreetMap reverse geocoding
+- Clean title and description handling: city is stored separately instead of being prefixed into the title/description
 - Migration script (`backend/updateCities.js`) to update existing data with city info
 - CSV, JSON, and Excel import with `.xlsx` and `.xls`
 - Image ingestion for IMINT-style nodes
 - Fixed terrain image overlay: upload a custom image and anchor it to real-world coordinates
 - Marker clustering for dense data
 - Hover preview cards for quick node inspection
-- Click-to-open dossier panel for selected nodes
+- Click-to-open dossier panel for selected nodes, including edit/delete actions
+- Center-screen notification, confirmation, and edit dialogs for node actions
 - Type, source, and keyword filters
 - Auto-focus/select node on unique match or Enter key in search
 - Dynamic legend always shows core intelligence types (OSINT, HUMINT, IMINT)
@@ -68,6 +74,7 @@ intel-dashboard/
 |   `-- index.html
 |-- src/
 |   |-- components/
+|   |   |-- ActionDialogs.js
 |   |   |-- AddNodeForm.js
 |   |   |-- FileUpload.js
 |   |   |-- FilterPanel.js
@@ -102,7 +109,7 @@ intel-dashboard/
   React entry point.
 
 - [src/index.css](/d:/intel-dashboard/src/index.css)
-  Global viewport, reset, and shared browser-level styling.
+  Global viewport, layout, dossier, dialog, and shared dashboard styling.
 
 ### Components
 
@@ -122,7 +129,10 @@ intel-dashboard/
   Renders the Leaflet map, terrain overlay, clustered markers, hover cards, popups, and focus logic for filtered nodes.
 
 - [src/components/IntelligencePanel.js](/d:/intel-dashboard/src/components/IntelligencePanel.js)
-  Displays detailed metadata for the currently selected node.
+  Displays detailed metadata for the currently selected node and exposes edit/delete actions.
+
+- [src/components/ActionDialogs.js](/d:/intel-dashboard/src/components/ActionDialogs.js)
+  Provides reusable center-screen notification, confirmation, and edit dialogs.
 
 - [src/components/Legend.js](/d:/intel-dashboard/src/components/Legend.js)
   Shows only the intelligence types currently visible on the map.
@@ -130,7 +140,7 @@ intel-dashboard/
 ### Services
 
 - [src/services/api.js](/d:/intel-dashboard/src/services/api.js)
-  Frontend API wrapper for backend intelligence retrieval and insertion.
+  Frontend API wrapper for backend intelligence retrieval, creation, bulk import, update, and delete operations.
 
 ### Utilities
 
@@ -149,9 +159,12 @@ intel-dashboard/
 ## Backend File Guide
 
 - [backend/server.js](/d:/intel-dashboard/backend/server.js)
-  Express server that connects to local MongoDB and exposes:
+  Express server that connects to MongoDB and exposes:
   - `GET /api/intelligence`
   - `POST /api/intelligence`
+  - `POST /api/intelligence/bulk`
+  - `PUT /api/intelligence/:id`
+  - `DELETE /api/intelligence/:id`
 
 - [backend/package.json](/d:/intel-dashboard/backend/package.json)
   Backend dependency manifest.
@@ -167,6 +180,8 @@ The frontend expects intelligence nodes in roughly this format:
   "type": "OSINT",
   "title": "Example node",
   "description": "Summary of the intelligence item",
+  "city": "Delhi",
+  "source": "manual",
   "image_url": "https://example.com/image.jpg"
 }
 ```
@@ -226,7 +241,21 @@ To update existing data with city info, run:
 node updateCities.js
 ```
 
-in the `backend` folder. This will add a `city` field and update titles/descriptions for all nodes using OpenStreetMap reverse geocoding.
+in the `backend` folder. This adds or refreshes the `city` field for existing nodes using OpenStreetMap reverse geocoding.
+
+#### API Routes
+
+The backend exposes the following intelligence routes:
+
+```text
+GET    /api/intelligence
+POST   /api/intelligence
+POST   /api/intelligence/bulk
+PUT    /api/intelligence/:id
+DELETE /api/intelligence/:id
+```
+
+The `PUT` and `DELETE` routes require a MongoDB `_id` value. Local-only nodes without a database id cannot be updated or deleted through the backend.
 
 ## Build
 
@@ -240,12 +269,12 @@ npm run build
 
 - AWS S3 integration is not implemented in the current version.
 - File ingestion is local and browser-based.
-- The backend currently supports MongoDB retrieval and insertion, but the manual node form is still frontend-first in behavior.
+- The backend supports MongoDB retrieval, insertion, bulk insertion, update, and delete.
 - The terrain overlay is stored in browser `localStorage`, not in the backend.
 - The intelligence type system is standardized in the UI, but uncommon types depend on what is stored in MongoDB.
 
 ## Suggested Next Improvements
 
-- Add collapsible sidebar sections
 - Add map calibration helpers for terrain alignment
 - Add README screenshots or sample datasets for easier onboarding
+- Add authentication before exposing update/delete routes in a real deployment
