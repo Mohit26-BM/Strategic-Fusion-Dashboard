@@ -359,6 +359,10 @@ function App() {
       </aside>
 
       <main className="map-stage">
+        <a className="map-help-button" href="/help.html" target="_blank" rel="noreferrer">
+          ?
+        </a>
+
         <MapView
           data={filteredData}
           onNodeClick={setSelectedNode}
