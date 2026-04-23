@@ -2,7 +2,7 @@
 
 A web-based intelligence dashboard for building a common operating picture across geospatial intelligence feeds. The project combines a React frontend, a Leaflet map interface, and a small Express/MongoDB backend for storing and retrieving intelligence nodes.
 
-![Strategic Fusion Dashboard](docs/dashboard.png)
+![Strategic Fusion Dashboard](dashboard.png)
 
 ## Overview
 
