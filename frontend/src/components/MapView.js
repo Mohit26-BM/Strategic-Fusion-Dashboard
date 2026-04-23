@@ -104,6 +104,12 @@ function FocusController({ focusRequest, terrainConfig, data }) {
 }
 
 function DossierPopupButton({ point, onSelectNode, color }) {
+  const handlePress = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onSelectNode(point);
+  };
+
   return (
     <button
       type="button"
@@ -119,7 +125,9 @@ function DossierPopupButton({ point, onSelectNode, color }) {
         marginBottom: "10px",
         width: "100%",
       }}
-      onClick={() => onSelectNode(point)}
+      onMouseDown={handlePress}
+      onPointerDown={handlePress}
+      onClick={handlePress}
     >
       View Dossier
     </button>
@@ -206,7 +214,11 @@ function MapView({
                 key={point._id || `${point.lat}-${point.lng}-${index}`}
                 position={[point.lat, point.lng]}
                 icon={markerIcons[point.type] || markerIcons.OSINT}
+                riseOnHover={true}
+                bubblingMouseEvents={false}
                 eventHandlers={{
+                  mousedown: () => handleSelectNode(point),
+                  touchstart: () => handleSelectNode(point),
                   click: () => handleSelectNode(point),
                   popupopen: () => handleSelectNode(point),
                   mouseover: () => setHovered(point),
