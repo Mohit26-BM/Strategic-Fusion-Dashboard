@@ -42,6 +42,7 @@ function FilterPanel({ data, onFilter = () => {} }) {
     onFilter(null, {
       search: filters.searchTerm,
       activeType: filters.type,
+      activeSource: filters.source,
     });
 
     // Only for UI count
@@ -76,6 +77,7 @@ function FilterPanel({ data, onFilter = () => {} }) {
         shouldFocus: true,
         search: filters.searchTerm,
         activeType: filters.type,
+        activeSource: filters.source,
         focusNode: filtered[0],
       });
     }
