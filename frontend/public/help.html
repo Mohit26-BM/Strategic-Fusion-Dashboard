@@ -3,55 +3,238 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-  <title>Intelligence Dashboard Help</title>
+  <title>Strategic Fusion Dashboard Help</title>
   <style>
-    body { font-family: system-ui, sans-serif; background: #10151c; color: #f3f6fa; margin: 0; padding: 0; }
-    .container { max-width: 700px; margin: 40px auto; background: #18202b; border-radius: 12px; padding: 32px 28px; box-shadow: 0 2px 16px #0004; }
-    h1, h2 { color: #2A81CB; }
-    h1 { font-size: 2.2em; margin-bottom: 0.2em; }
-    h2 { margin-top: 2em; }
-    ul, ol { margin-left: 1.5em; }
-    code { background: #232b36; color: #aef; padding: 2px 6px; border-radius: 4px; }
-    a { color: #7ecbff; }
+    :root {
+      color-scheme: dark;
+      --bg: #071018;
+      --panel: #111b26;
+      --panel-soft: #0b141d;
+      --line: rgba(135, 163, 191, 0.18);
+      --text: #eef5fb;
+      --muted: #9eb0c2;
+      --accent: #7cc7ff;
+      --danger: #ffb4b4;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(26, 43, 63, 0.9), transparent 30%),
+        var(--bg);
+      color: var(--text);
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+      line-height: 1.6;
+    }
+
+    a {
+      color: var(--accent);
+    }
+
+    .page {
+      width: min(980px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 42px 0;
+    }
+
+    .hero,
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(17, 27, 38, 0.96), rgba(7, 16, 24, 0.96));
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.3);
+    }
+
+    .hero {
+      padding: 34px;
+      margin-bottom: 18px;
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--accent);
+      font-size: 12px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2 {
+      line-height: 1.15;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(32px, 6vw, 56px);
+    }
+
+    h2 {
+      margin: 0 0 12px;
+      font-size: 22px;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .hero p {
+      max-width: 720px;
+      margin-top: 14px;
+      font-size: 16px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .card {
+      padding: 24px;
+    }
+
+    ul,
+    ol {
+      margin: 0;
+      padding-left: 20px;
+      color: var(--muted);
+    }
+
+    li {
+      margin: 8px 0;
+    }
+
+    strong,
+    code {
+      color: var(--text);
+    }
+
+    code {
+      padding: 2px 6px;
+      border-radius: 6px;
+      background: var(--panel-soft);
+      border: 1px solid var(--line);
+      font-size: 0.95em;
+    }
+
+    .full {
+      grid-column: 1 / -1;
+    }
+
+    .warning {
+      color: var(--danger);
+    }
+
+    .back-link {
+      display: inline-flex;
+      margin-top: 20px;
+      padding: 10px 14px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel-soft);
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    @media (max-width: 760px) {
+      .page {
+        width: min(100% - 24px, 980px);
+        padding: 24px 0;
+      }
+
+      .hero,
+      .card {
+        padding: 20px;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Intelligence Dashboard Help</h1>
-    <p>This dashboard is a workspace for ingesting, visualizing, and filtering geospatial intelligence nodes. It is designed for rapid review, mission planning, and situational awareness.</p>
+  <main class="page">
+    <section class="hero">
+      <p class="eyebrow">Dashboard Help</p>
+      <h1>Strategic Fusion Dashboard</h1>
+      <p>
+        This dashboard brings OSINT, HUMINT, IMINT, and other intelligence records into one map-based workspace.
+        It is built for rapid review, geospatial filtering, image inspection, and maintaining a common operating picture.
+      </p>
+      <a class="back-link" href="/">Back to Dashboard</a>
+    </section>
 
-    <h2>How to Use</h2>
-    <ol>
-      <li><b>Ingest Data:</b> Use the <b>File Upload</b> or <b>Add Node</b> forms to add intelligence nodes. Supported types include OSINT, HUMINT, SIGINT, CYBINT, IMINT, and more.</li>
-      <li><b>Filter & Search:</b> Use the filter panel to search by type, source, or keywords. The map and list update instantly.</li>
-      <li><b>Map & Overlay:</b> Visualize nodes on the map. Use <b>Terrain Setup</b> to overlay mission images or custom maps.</li>
-      <li><b>Review Details:</b> Click a node to see its full dossier and metadata.</li>
-    </ol>
+    <section class="grid">
+      <article class="card">
+        <h2>Core Workflow</h2>
+        <ol>
+          <li><strong>Load data:</strong> Fetch existing MongoDB records or import CSV, JSON, Excel, and image files.</li>
+          <li><strong>Add nodes:</strong> Use the manual node form when you already know the location and details.</li>
+          <li><strong>Inspect nodes:</strong> Hover over markers for a quick preview or click a marker to open the dossier panel.</li>
+          <li><strong>Maintain records:</strong> Use dossier actions to edit or delete MongoDB-backed nodes.</li>
+          <li><strong>Filter the map:</strong> Search by keyword and narrow by intelligence type or source.</li>
+        </ol>
+      </article>
 
-    <h2>Features</h2>
-    <ul>
-      <li>Bulk and manual data ingestion (with validation)</li>
-      <li>Geospatial filtering and search</li>
-      <li>Custom terrain overlays (mission images, satellite, etc.)</li>
-      <li>Legend and type color-coding</li>
-      <li>MongoDB backend for persistence</li>
-    </ul>
+      <article class="card">
+        <h2>Supported Data</h2>
+        <ul>
+          <li><code>OSINT</code> Open Source Intelligence</li>
+          <li><code>HUMINT</code> Human Intelligence</li>
+          <li><code>IMINT</code> Imagery Intelligence</li>
+          <li>Additional MongoDB-backed types such as <code>SIGINT</code>, <code>CYBINT</code>, and <code>SEBINT</code></li>
+          <li>Imported records must include valid latitude and longitude values.</li>
+        </ul>
+      </article>
 
-    <h2>Limitations</h2>
-    <ul>
-      <li>Overlay alignment requires manual bounds entry</li>
-      <li>Reverse geocoding uses free OpenStreetMap API (rate limits apply)</li>
-      <li>No authentication or access control (demo only)</li>
-      <li>Not for operational use—demo/prototype only</li>
-      <li>Browser local storage used for some settings</li>
-    </ul>
+      <article class="card">
+        <h2>Map Tools</h2>
+        <ul>
+          <li>Markers are clustered when many nodes are close together.</li>
+          <li>The hover card gives a fast preview without opening the full dossier.</li>
+          <li>The legend shows intelligence types currently visible on the map.</li>
+          <li>Terrain Setup can pin a custom image overlay to real-world map bounds.</li>
+        </ul>
+      </article>
 
-    <h2>More Info</h2>
-    <ul>
-      <li>Source code: <a href="https://github.com/your-repo-url">https://github.com/Mohit26-BM/Strategic-Fusion-Dashboard</a></li>
-      <li>Contact: <a href="mailto:your@email.com">m26ohitbali@gmail.com</a></li>
-    </ul>
-  </div>
+      <article class="card">
+        <h2>Node Actions</h2>
+        <ul>
+          <li><strong>Edit Details:</strong> Updates title, type, coordinates, source, image URL, and description.</li>
+          <li><strong>Delete Node:</strong> Opens a confirmation dialog before removing a record.</li>
+          <li>Success and error notifications appear in the center of the screen.</li>
+          <li>Update and delete require the node to have a MongoDB <code>_id</code>.</li>
+        </ul>
+      </article>
+
+      <article class="card full">
+        <h2>Current Limitations</h2>
+        <ul>
+          <li>AWS S3 integration is not implemented in this version.</li>
+          <li>File ingestion is local and browser-based.</li>
+          <li>Terrain overlay bounds must be entered manually.</li>
+          <li>Reverse geocoding uses OpenStreetMap Nominatim, so rate limits may apply.</li>
+          <li class="warning">Authentication and role-based access control are not included yet. Do not expose update/delete routes in a real deployment without access control.</li>
+          <li>This is a prototype dashboard and should not be used for operational intelligence decisions.</li>
+        </ul>
+      </article>
+
+      <article class="card full">
+        <h2>Project Links</h2>
+        <ul>
+          <li>Repository: <a href="https://github.com/Mohit26-BM/Strategic-Fusion-Dashboard">github.com/Mohit26-BM/Strategic-Fusion-Dashboard</a></li>
+          <li>Contact: <a href="mailto:m26ohitbali@gmail.com">m26ohitbali@gmail.com</a></li>
+        </ul>
+      </article>
+    </section>
+  </main>
 </body>
 </html>
