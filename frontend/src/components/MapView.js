@@ -5,7 +5,6 @@ import {
   Marker,
   Popup,
   ImageOverlay,
-  CircleMarker,
   useMap,
 } from "react-leaflet";
 
@@ -32,20 +31,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl,
 });
 
-// --------------------
-// Helper (safe comparison)
-// --------------------
-function isSameNode(a, b) {
-  if (!a || !b) return false;
-  // Prefer _id if present
-  if (a._id && b._id) return a._id === b._id;
-  return (
-    Math.abs(a.lat - b.lat) < 0.0001 &&
-    Math.abs(a.lng - b.lng) < 0.0001 &&
-    a.title === b.title &&
-    a.type === b.type
-  );
-}
+
 
 // --------------------
 // Focus Controller (FIXED)
@@ -195,93 +181,65 @@ function MapView({
         />
 
         {/* Markers */}
-        <MarkerClusterGroup
-          spiderfyOnMaxZoom={true}
-          showCoverageOnHover={false}
-          zoomToBoundsOnClick={false} // 🔥 IMPORTANT FIX
-        >
-          {renderedPoints.map((point, i) => {
+        <MarkerClusterGroup>
+          {renderedPoints.map((point, idx) => {
             const typeConfig = getIntelTypeConfig(point.type);
-            const isSelected = isSameNode(point, selectedNode);
-
             return (
               <Marker
-                key={point._id || `${point.lat}-${point.lng}-${i}`}
+                key={`${point.title}-${point.lat}-${point.lng}-${idx}`}
                 position={[point.lat, point.lng]}
                 icon={markerIcons[point.type] || markerIcons.OSINT}
                 eventHandlers={{
-                  click: (e) => {
-                    // 🔥 CRITICAL: prevent cluster from hijacking click
-                    e.originalEvent?.stopPropagation?.();
-
-                    console.log("🔥 MARKER CLICKED:", point);
-
-                    if (typeof onNodeClick === "function") {
-                      onNodeClick({ ...point, _timestamp: Date.now() });
-                    }
-                  },
+                  click: () => onNodeClick(point),
                   mouseover: () => setHovered(point),
                   mouseout: () => setHovered(null),
                 }}
               >
-                <Popup>
-                  <div style={{ textAlign: "center" }}>
-                    <button
-                      type="button"
+                <Popup maxWidth={300} autoPan={false}>
+                  <div style={{ minWidth: "220px" }}>
+                    <div
                       style={{
-                        background: typeConfig.color || "#4A90E2",
-                        border: "none",
-                        borderRadius: "8px",
-                        cursor: "pointer",
-                        fontSize: "16px",
-                        padding: "8px 16px",
-                        color: "#fff",
-                        fontWeight: "600",
-                        marginBottom: "8px",
-                        width: "100%",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "8px",
-                      }}
-                      onClick={(e) => {
-                        console.log("🟢 BUTTON CLICKED:", point);
-
-                        if (typeof onNodeClick === "function") {
-                          onNodeClick({ ...point, _timestamp: Date.now() });
-                        }
-
-                        // close popup
-                        const popup = e.target.closest(".leaflet-popup");
-                        if (popup) {
-                          const closeBtn = popup.querySelector(
-                            ".leaflet-popup-close-button",
-                          );
-                          if (closeBtn) closeBtn.click();
-                        }
+                        background: typeConfig.color,
+                        color: "white",
+                        padding: "8px",
+                        marginBottom: "10px",
+                        borderRadius: "6px",
+                        fontWeight: "bold",
                       }}
                     >
-                      🧭 View Dossier
-                    </button>
+                      {typeConfig.shortLabel} - {typeConfig.label}
+                    </div>
+
+                    <h4 style={{ margin: "0 0 8px 0" }}>{point.title}</h4>
+
+                    <p style={{ margin: "0 0 10px 0", fontSize: "14px" }}>
+                      {point.description}
+                    </p>
+
+                    {point.image_url && (
+                      <img
+                        src={point.image_url}
+                        alt={point.title || "intelligence imagery"}
+                        style={{
+                          width: "100%",
+                          borderRadius: "6px",
+                        }}
+                      />
+                    )}
+
+                    <div
+                      style={{
+                        marginTop: "10px",
+                        fontSize: "11px",
+                        color: "#6b7280",
+                        borderTop: "1px solid #e5e7eb",
+                        paddingTop: "8px",
+                      }}
+                    >
+                      Coordinates: {point.lat.toFixed(4)}, {point.lng.toFixed(4)}
+                    </div>
                   </div>
-
-                  <b>{point.title}</b>
-                  <br />
-                  {point.description}
                 </Popup>
-
-                {isSelected && (
-                  <CircleMarker
-                    center={[point.lat, point.lng]}
-                    radius={18}
-                    pathOptions={{
-                      color: "#fff",
-                      weight: 2,
-                      fillColor: typeConfig.color,
-                      fillOpacity: 0.2,
-                    }}
-                  />
-                )}
               </Marker>
             );
           })}
