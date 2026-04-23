@@ -1,6 +1,12 @@
 import { getIntelTypeConfig } from "../utils/intelligenceTypes";
 
-function IntelligencePanel({ node, visibleCount = 0, source = "none" }) {
+function IntelligencePanel({
+  node,
+  visibleCount = 0,
+  source = "none",
+  onEdit = () => {},
+  onDelete = () => {},
+}) {
   // --------------------
   // EMPTY STATE
   // --------------------
@@ -11,8 +17,8 @@ function IntelligencePanel({ node, visibleCount = 0, source = "none" }) {
           <div className="dossier-empty-kicker">No active dossier</div>
           <h3 className="dossier-title">Select a node on the map</h3>
           <p className="dossier-empty-copy">
-            Hover gives a quick peek. Clicking a marker opens a fuller dossier here
-            without interrupting the map view.
+            Hover gives a quick peek. Clicking a marker opens a fuller dossier
+            here without interrupting the map view.
           </p>
 
           <div className="dossier-stat-grid">
@@ -66,6 +72,23 @@ function IntelligencePanel({ node, visibleCount = 0, source = "none" }) {
       <h3 className="dossier-title">
         {node.title || "Untitled Intelligence Node"}
       </h3>
+
+      <div className="dossier-action-row">
+        <button
+          type="button"
+          className="dossier-action-button"
+          onClick={() => onEdit(node)}
+        >
+          Edit Details
+        </button>
+        <button
+          type="button"
+          className="dossier-action-button dossier-action-button--danger"
+          onClick={() => onDelete(node)}
+        >
+          Delete Node
+        </button>
+      </div>
 
       {/* COORDINATES */}
       <div className="dossier-meta-grid">
