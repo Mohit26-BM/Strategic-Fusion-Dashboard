@@ -32,52 +32,52 @@ function App() {
   const [mapFocusRequest, setMapFocusRequest] = useState(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [sectionState, setSectionState] = useState(DEFAULT_SECTIONS);
-
   const [terrainConfig, setTerrainConfig] = useState(() => {
     const savedValue = window.localStorage.getItem("terrain-config");
-    if (!savedValue) return DEFAULT_TERRAIN_CONFIG;
+
+    if (!savedValue) {
+      return DEFAULT_TERRAIN_CONFIG;
+    }
+
     try {
       return JSON.parse(savedValue);
     } catch {
       return DEFAULT_TERRAIN_CONFIG;
     }
   });
-
-  // 🔥 FILTER STATE (single source of truth)
   const [filterState, setFilterState] = useState({
     search: "",
     type: "all",
+    source: "all",
   });
 
-  // 🔥 CENTRAL FILTER FUNCTION
   const filterNodes = useCallback((nodes, filter) => {
     let result = nodes;
 
-    // search
     if (filter.search) {
       const term = filter.search.toLowerCase();
       result = result.filter(
-        (n) =>
-          n.title?.toLowerCase().includes(term) ||
-          n.description?.toLowerCase().includes(term) ||
-          n.city?.toLowerCase().includes(term) ||
-          n.title?.toLowerCase().includes(term) ||
-          n.description?.toLowerCase().includes(term),
+        (node) =>
+          node.title?.toLowerCase().includes(term) ||
+          node.description?.toLowerCase().includes(term) ||
+          node.city?.toLowerCase().includes(term),
       );
     }
 
-    // type
     if (filter.type !== "all") {
       result = result.filter(
-        (n) =>
-          n.type?.trim().toUpperCase() === filter.type.trim().toUpperCase(),
+        (node) =>
+          node.type?.trim().toUpperCase() === filter.type.trim().toUpperCase(),
       );
+    }
+
+    if (filter.source !== "all") {
+      result = result.filter((node) => (node.source || "unknown") === filter.source);
     }
 
     return result;
   }, []);
 
-  // 🔥 LOAD DATA
   const loadFromMongoDB = useCallback(async () => {
     try {
       const mongoData = await fetchIntelligence();
@@ -97,26 +97,23 @@ function App() {
     }
   }, []);
 
-  // 🔥 LOAD ON START
   useEffect(() => {
     if (showDashboard) {
       loadFromMongoDB();
     }
   }, [showDashboard, loadFromMongoDB]);
 
-  // 🔥 APPLY FILTER AUTOMATICALLY
   useEffect(() => {
     setFilteredData(filterNodes(data, filterState));
   }, [data, filterState, filterNodes]);
 
-  // 🔥 HANDLE FILTER CHANGE
   const handleFilterChange = (_, options = {}) => {
     setFilterState({
       search: options.search || "",
       type: options.activeType || "all",
+      source: options.activeSource || "all",
     });
 
-    // Focus on node if requested (but do NOT auto-open dossier)
     if (options.shouldFocus && options.focusNode) {
       setMapFocusRequest({
         mode: "single",
@@ -124,50 +121,47 @@ function App() {
         lng: options.focusNode.lng,
         timestamp: Date.now(),
       });
-      // Do NOT setSelectedNode here; only set on marker click
-    } else if (options.shouldFocus && options.activeType !== "all") {
+      return;
+    }
+
+    if (options.shouldFocus) {
       setMapFocusRequest({
-        type: options.activeType,
+        mode: "fit",
         timestamp: Date.now(),
       });
     }
   };
 
-  // 🔥 ADD NODE
   const handleAddNode = async (newNode) => {
     try {
       await addIntelligence(newNode);
-
-      // slight delay (Render cold start safety)
-      await new Promise((res) => setTimeout(res, 500));
-
+      await new Promise((resolve) => setTimeout(resolve, 500));
       await loadFromMongoDB();
     } catch (error) {
       console.error("Failed to add node:", error);
-      alert("Failed to save node: " + error.message);
+      alert(`Failed to save node: ${error.message}`);
     }
   };
 
-  // 🔥 BULK IMPORT
   const handleImportedData = async (importedNodes) => {
     try {
       await bulkAddIntelligence(importedNodes);
-
-      await new Promise((res) => setTimeout(res, 500));
-
+      await new Promise((resolve) => setTimeout(resolve, 500));
       await loadFromMongoDB();
       alert(`Successfully imported ${importedNodes.length} nodes`);
     } catch (error) {
       console.error("Failed to import:", error);
-      alert("Import failed: " + error.message);
+      alert(`Import failed: ${error.message}`);
     }
   };
 
   const toggleSection = (key) => {
-    setSectionState((prev) => ({ ...prev, [key]: !prev[key] }));
+    setSectionState((current) => ({
+      ...current,
+      [key]: !current[key],
+    }));
   };
 
-  // LANDING PAGE
   if (!showDashboard) {
     return <LandingPage onEnter={() => setShowDashboard(true)} />;
   }
@@ -177,15 +171,13 @@ function App() {
       <button
         type="button"
         className="mobile-drawer-toggle"
-        onClick={() => setIsMobileSidebarOpen((prev) => !prev)}
+        onClick={() => setIsMobileSidebarOpen((current) => !current)}
       >
         {isMobileSidebarOpen ? "Close Controls" : "Open Controls"}
       </button>
 
       <div
-        className={`app-sidebar-scrim ${
-          isMobileSidebarOpen ? "is-visible" : ""
-        }`}
+        className={`app-sidebar-scrim ${isMobileSidebarOpen ? "is-visible" : ""}`}
         onClick={() => setIsMobileSidebarOpen(false)}
       />
 
@@ -230,10 +222,7 @@ function App() {
             isOpen={sectionState.terrain}
             onToggle={() => toggleSection("terrain")}
           >
-            <TerrainMapControl
-              value={terrainConfig}
-              onChange={setTerrainConfig}
-            />
+            <TerrainMapControl value={terrainConfig} onChange={setTerrainConfig} />
           </SectionCard>
 
           <SectionCard
@@ -249,11 +238,7 @@ function App() {
       <main className="map-stage">
         <MapView
           data={filteredData}
-          
-          onNodeClick={(node) => {
-            console.log("🧠 APP RECEIVED NODE:", node);
-            setSelectedNode(node);
-          }}
+          onNodeClick={setSelectedNode}
           selectedNode={selectedNode}
           terrainConfig={terrainConfig}
           focusRequest={mapFocusRequest}
@@ -265,10 +250,7 @@ function App() {
           source={source}
         />
 
-        {/* Legend in a fixed overlay slot for visibility */}
-        <div
-          style={{ position: "absolute", bottom: 20, right: 20, zIndex: 1000 }}
-        >
+        <div style={{ position: "absolute", bottom: 20, right: 20, zIndex: 1000 }}>
           <Legend count={filteredData.length} data={filteredData} />
         </div>
 
