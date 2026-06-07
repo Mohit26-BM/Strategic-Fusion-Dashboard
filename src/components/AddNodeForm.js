@@ -16,24 +16,32 @@ function AddNodeForm({ onAdd }) {
 
     const lat = parseFloat(formData.lat);
     const lng = parseFloat(formData.lng);
+    const title = formData.title.trim();
 
-    if (Number.isNaN(lat) || Number.isNaN(lng) || !formData.title.trim()) {
+    // ✅ Better validation feedback
+    if (Number.isNaN(lat) || Number.isNaN(lng) || !title) {
+      alert("Please enter valid latitude, longitude, and title");
       return;
     }
 
     if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-      alert("Invalid coordinates");
+      alert("Coordinates must be within valid ranges");
       return;
     }
 
     onAdd({
       ...formData,
-      title: formData.title.trim(),
-      description: formData.description.trim(),
+      title,
+      description: formData.description.trim() || "",
+
+      // 🔥 IMPORTANT FIX (prevents filter bugs)
+      type: formData.type?.trim().toUpperCase(),
+
       lat,
       lng,
     });
 
+    // Reset form
     setFormData({
       lat: "",
       lng: "",
@@ -115,7 +123,8 @@ function AddNodeForm({ onAdd }) {
       />
 
       <div style={helperTextStyle}>
-        Local image uploads now live in the Ingestion panel to avoid duplicate controls.
+        Local image uploads now live in the Ingestion panel to avoid duplicate
+        controls.
       </div>
 
       <button type="submit" style={buttonStyle}>
@@ -125,6 +134,7 @@ function AddNodeForm({ onAdd }) {
   );
 }
 
+// Styles
 const formStyle = {
   display: "grid",
   gap: "10px",

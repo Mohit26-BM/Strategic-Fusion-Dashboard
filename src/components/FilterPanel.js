@@ -9,17 +9,15 @@ function FilterPanel({ data, onFilter = () => {} }) {
 
   const [filteredCount, setFilteredCount] = useState(data.length);
 
-  // Collect unique sources for filtering
   const availableSources = useMemo(() => {
     const sources = Array.from(
-      new Set(data.map((d) => d.source).filter(Boolean)),
+      new Set(data.map((item) => item.source).filter(Boolean)),
     );
     return ["all", ...sources];
   }, [data]);
 
-  // Collect unique types for filtering
   const availableTypes = useMemo(() => {
-    const types = Array.from(new Set(data.map((d) => d.type).filter(Boolean)));
+    const types = Array.from(new Set(data.map((item) => item.type).filter(Boolean)));
     return ["all", ...types];
   }, [data]);
 
@@ -27,38 +25,52 @@ function FilterPanel({ data, onFilter = () => {} }) {
     if (filters.type !== "all" && !availableTypes.includes(filters.type)) {
       setFilters((current) => ({ ...current, type: "all" }));
     }
-    if (
-      filters.source !== "all" &&
-      !availableSources.includes(filters.source)
-    ) {
+
+    if (filters.source !== "all" && !availableSources.includes(filters.source)) {
       setFilters((current) => ({ ...current, source: "all" }));
     }
   }, [availableTypes, availableSources, filters.type, filters.source]);
 
   useEffect(() => {
+    onFilter(null, {
+      search: filters.searchTerm,
+      activeType: filters.type,
+      activeSource: filters.source,
+    });
+
     let filtered = data;
 
     if (filters.type !== "all") {
-      filtered = filtered.filter((d) => d.type === filters.type);
+      filtered = filtered.filter(
+        (item) =>
+          item.type?.trim().toUpperCase() === filters.type.trim().toUpperCase(),
+      );
     }
+
     if (filters.source !== "all") {
-      filtered = filtered.filter((d) => d.source === filters.source);
+      filtered = filtered.filter((item) => item.source === filters.source);
     }
+
     if (filters.searchTerm.trim()) {
       const term = filters.searchTerm.toLowerCase();
       filtered = filtered.filter(
-        (d) =>
-          d.title?.toLowerCase().includes(term) ||
-          d.description?.toLowerCase().includes(term),
+        (item) =>
+          item.title?.toLowerCase().includes(term) ||
+          item.description?.toLowerCase().includes(term) ||
+          item.city?.toLowerCase().includes(term),
       );
     }
 
     setFilteredCount(filtered.length);
-    // If only one match, auto-focus/select it
+
     if (filters.searchTerm.trim() && filtered.length === 1) {
-      onFilter(filtered, { shouldFocus: true });
-    } else {
-      onFilter(filtered);
+      onFilter(null, {
+        shouldFocus: true,
+        search: filters.searchTerm,
+        activeType: filters.type,
+        activeSource: filters.source,
+        focusNode: filtered[0],
+      });
     }
   }, [filters, data, onFilter]);
 
@@ -66,11 +78,13 @@ function FilterPanel({ data, onFilter = () => {} }) {
     setFilters({ type: "all", searchTerm: "", source: "all" });
   };
 
+  const hasActiveFilters =
+    filters.type !== "all" || filters.searchTerm || filters.source !== "all";
+
   return (
     <div style={panelStyle}>
-      <h4 style={{ margin: "0 0 10px 0", fontSize: "14px" }}>Filters</h4>
+      <h4 style={{ margin: 0, fontSize: "14px", color: "#f3f7fb" }}>Filters</h4>
 
-      {/* Type Filter Chips */}
       <div style={chipRowStyle}>
         {availableTypes.map((type) => (
           <button
@@ -87,67 +101,34 @@ function FilterPanel({ data, onFilter = () => {} }) {
         ))}
       </div>
 
-      {/* Search Input */}
       <input
         style={inputStyle}
         type="text"
-        placeholder="Search title or description..."
+        placeholder="Search title, city, or description"
         value={filters.searchTerm}
         onChange={(e) => setFilters({ ...filters, searchTerm: e.target.value })}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            let filtered = data;
-            if (filters.type !== "all") {
-              filtered = filtered.filter((d) => d.type === filters.type);
-            }
-            if (filters.source !== "all") {
-              filtered = filtered.filter((d) => d.source === filters.source);
-            }
-            if (filters.searchTerm.trim()) {
-              const term = filters.searchTerm.toLowerCase();
-              filtered = filtered.filter(
-                (d) =>
-                  d.title?.toLowerCase().includes(term) ||
-                  d.description?.toLowerCase().includes(term),
-              );
-            }
-            if (filtered.length > 0) {
-              onFilter(filtered, { shouldFocus: true });
-            }
-          }
-        }}
       />
 
-      {/* Source Filter */}
       {availableSources.length > 1 && (
         <select
           style={inputStyle}
           value={filters.source}
           onChange={(e) => setFilters({ ...filters, source: e.target.value })}
         >
-          {availableSources.map((src) => (
-            <option key={src} value={src}>
-              {src === "all" ? "All Sources" : src}
+          {availableSources.map((source) => (
+            <option key={source} value={source}>
+              {source === "all" ? "All Sources" : source}
             </option>
           ))}
         </select>
       )}
 
-      {/* Summary and Reset */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginTop: "10px",
-        }}
-      >
+      <div style={footerStyle}>
         <div style={summaryStyle}>
           Showing {filteredCount} of {data.length}
         </div>
-        {(filters.type !== "all" ||
-          filters.searchTerm ||
-          filters.source !== "all") && (
+
+        {hasActiveFilters && (
           <button type="button" style={resetButtonStyle} onClick={handleReset}>
             Reset
           </button>
@@ -157,64 +138,62 @@ function FilterPanel({ data, onFilter = () => {} }) {
   );
 }
 
-// Styles defined outside component
 const panelStyle = {
-  background: "white",
-  padding: "15px",
-  borderRadius: "6px",
-  marginBottom: "15px",
+  display: "grid",
+  gap: "12px",
 };
 
 const chipRowStyle = {
   display: "flex",
   flexWrap: "wrap",
-  gap: "6px",
-  marginBottom: "10px",
+  gap: "8px",
 };
 
 const chipStyle = {
-  border: "1px solid #ddd",
-  background: "white",
-  color: "#666",
-  borderRadius: "20px",
-  padding: "5px 10px",
-  fontSize: "11px",
+  border: "1px solid rgba(135,163,191,0.16)",
+  background: "#0b141d",
+  color: "#a6b7c8",
+  borderRadius: "999px",
+  padding: "8px 12px",
+  fontSize: "12px",
   cursor: "pointer",
-  transition: "all 0.2s",
-  fontWeight: "500",
 };
 
 const activeChipStyle = {
-  background: "#2A81CB",
-  borderColor: "#2A81CB",
-  color: "white",
+  background: "rgba(63,178,255,0.16)",
+  borderColor: "rgba(124,199,255,0.45)",
+  color: "#e8f6ff",
 };
 
 const inputStyle = {
   width: "100%",
-  padding: "8px 10px",
-  background: "white",
-  border: "1px solid #ddd",
-  borderRadius: "4px",
-  color: "#333",
+  padding: "10px 12px",
+  border: "1px solid rgba(135,163,191,0.16)",
+  borderRadius: "10px",
+  background: "#0b141d",
+  color: "#edf3f8",
   boxSizing: "border-box",
-  fontSize: "13px",
+};
+
+const footerStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: "10px",
 };
 
 const summaryStyle = {
-  fontSize: "11px",
-  color: "#666",
+  fontSize: "12px",
+  color: "#8da1b5",
 };
 
 const resetButtonStyle = {
-  background: "#f5f5f5",
-  color: "#333",
-  border: "1px solid #ddd",
-  borderRadius: "4px",
-  padding: "5px 12px",
-  fontSize: "11px",
+  background: "transparent",
+  border: "1px solid rgba(135,163,191,0.16)",
+  color: "#c8d1dc",
+  borderRadius: "10px",
+  padding: "7px 12px",
   cursor: "pointer",
-  fontWeight: "500",
 };
 
 export default FilterPanel;

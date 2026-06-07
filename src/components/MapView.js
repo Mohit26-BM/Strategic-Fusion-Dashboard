@@ -1,8 +1,4 @@
-// --------------------
-// Imports (ALL at top)
-// --------------------
 import { useEffect, useMemo, useState } from "react";
-
 import {
   MapContainer,
   TileLayer,
@@ -12,10 +8,8 @@ import {
   CircleMarker,
   useMap,
 } from "react-leaflet";
-
 import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
-
 import { markerIcons } from "../utils/markerIcons";
 import { getIntelTypeConfig } from "../utils/intelligenceTypes";
 
@@ -27,9 +21,6 @@ import iconUrl from "leaflet/dist/images/marker-icon.png";
 import iconRetinaUrl from "leaflet/dist/images/marker-icon-2x.png";
 import shadowUrl from "leaflet/dist/images/marker-shadow.png";
 
-// --------------------
-// Leaflet icon fix
-// --------------------
 delete L.Icon.Default.prototype._getIconUrl;
 
 L.Icon.Default.mergeOptions({
@@ -37,56 +28,6 @@ L.Icon.Default.mergeOptions({
   iconRetinaUrl,
   shadowUrl,
 });
-
-// --------------------
-// Helpers
-// --------------------
-function isSameNode(left, right) {
-  if (!left || !right) return false;
-
-  return (
-    left.lat === right.lat &&
-    left.lng === right.lng &&
-    left.title === right.title &&
-    left.type === right.type
-  );
-}
-
-// --------------------
-// UI Components
-// --------------------
-function HelpButton() {
-  return (
-    <a
-      href="/help.html"
-      target="_blank"
-      rel="noopener noreferrer"
-      style={{
-        position: "absolute",
-        top: 18,
-        right: 18,
-        zIndex: 1200,
-        background: "#2A81CB",
-        color: "#fff",
-        borderRadius: "50%",
-        width: 38,
-        height: 38,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: 24,
-        fontWeight: 700,
-        boxShadow: "0 2px 8px #0005",
-        textDecoration: "none",
-        border: "2px solid #fff",
-        cursor: "pointer",
-      }}
-      title="Help: About & Usage"
-    >
-      ?
-    </a>
-  );
-}
 
 function TerrainViewport({ terrainConfig }) {
   const map = useMap();
@@ -110,36 +51,89 @@ function TerrainViewport({ terrainConfig }) {
   return null;
 }
 
-function FocusController({ focusRequest, terrainConfig }) {
+function FocusController({ focusRequest, terrainConfig, data }) {
   const map = useMap();
 
   useEffect(() => {
-    if (!focusRequest?.nodes?.length) {
+    if (!focusRequest) {
       if (!terrainConfig?.enabled) {
         map.setMaxBounds(null);
       }
       return;
     }
 
-    const coords = focusRequest.nodes
-      .filter((n) => Number.isFinite(n.lat) && Number.isFinite(n.lng))
-      .map((n) => [n.lat, n.lng]);
-
-    if (!coords.length) return;
-
-    if (coords.length === 1 || focusRequest.mode === "single") {
-      map.flyTo(coords[0], Math.max(map.getZoom(), 9), { duration: 0.75 });
-    } else {
-      map.flyToBounds(coords, { padding: [60, 60], duration: 0.75 });
+    if (
+      focusRequest.mode === "single" &&
+      Number.isFinite(focusRequest.lat) &&
+      Number.isFinite(focusRequest.lng)
+    ) {
+      map.flyTo(
+        [focusRequest.lat, focusRequest.lng],
+        Math.max(map.getZoom(), 9),
+        { animate: true, duration: 0.5, easeLinearity: 0.5 },
+      );
+      return;
     }
-  }, [focusRequest, map, terrainConfig]);
+
+    const coords = data
+      .filter((node) => Number.isFinite(node.lat) && Number.isFinite(node.lng))
+      .map((node) => [node.lat, node.lng]);
+
+    if (!coords.length) {
+      return;
+    }
+
+    if (coords.length === 1) {
+      map.flyTo(coords[0], Math.max(map.getZoom(), 9), {
+        animate: true,
+        duration: 0.5,
+        easeLinearity: 0.5,
+      });
+      return;
+    }
+
+    map.flyToBounds(coords, {
+      padding: [60, 60],
+      animate: true,
+      duration: 0.5,
+      easeLinearity: 0.5,
+    });
+  }, [focusRequest, map, terrainConfig, data]);
 
   return null;
 }
 
-// --------------------
-// Main Component
-// --------------------
+function DossierPopupButton({ point, onSelectNode, color }) {
+  const handlePress = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onSelectNode(point);
+  };
+
+  return (
+    <button
+      type="button"
+      style={{
+        background: color || "#4A90E2",
+        border: "none",
+        borderRadius: "8px",
+        cursor: "pointer",
+        fontSize: "15px",
+        padding: "9px 14px",
+        color: "#fff",
+        fontWeight: "600",
+        marginBottom: "10px",
+        width: "100%",
+      }}
+      onMouseDown={handlePress}
+      onPointerDown={handlePress}
+      onClick={handlePress}
+    >
+      View Dossier
+    </button>
+  );
+}
+
 function MapView({
   data,
   onNodeClick,
@@ -148,6 +142,12 @@ function MapView({
   focusRequest,
 }) {
   const [hovered, setHovered] = useState(null);
+
+  const handleSelectNode = (point) => {
+    if (typeof onNodeClick === "function") {
+      onNodeClick({ ...point, _selectedAt: Date.now() });
+    }
+  };
 
   const terrainEnabled = Boolean(
     terrainConfig?.enabled && terrainConfig?.imageUrl,
@@ -168,14 +168,12 @@ function MapView({
     : [20.5937, 78.9629];
 
   const renderedPoints = useMemo(
-    () => data.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng)),
+    () => data.filter((point) => Number.isFinite(point.lat) && Number.isFinite(point.lng)),
     [data],
   );
 
   return (
     <div style={{ position: "relative", height: "100%", width: "100%" }}>
-      <HelpButton />
-
       <MapContainer
         center={mapCenter}
         zoom={terrainEnabled ? 8 : 5}
@@ -200,52 +198,128 @@ function MapView({
         <FocusController
           focusRequest={focusRequest}
           terrainConfig={terrainConfig}
+          data={data}
         />
 
-        <MarkerClusterGroup>
-          {renderedPoints.map((point, i) => {
+        <MarkerClusterGroup
+          spiderfyOnMaxZoom={true}
+          showCoverageOnHover={false}
+          zoomToBoundsOnClick={false}
+        >
+          {renderedPoints.map((point, index) => {
             const typeConfig = getIntelTypeConfig(point.type);
-            const isSelected = isSameNode(point, selectedNode);
 
             return (
               <Marker
-                key={`${point.title}-${i}`}
+                key={point._id || `${point.lat}-${point.lng}-${index}`}
                 position={[point.lat, point.lng]}
                 icon={markerIcons[point.type] || markerIcons.OSINT}
+                riseOnHover={true}
+                bubblingMouseEvents={false}
                 eventHandlers={{
-                  click: () => onNodeClick(point),
+                  mousedown: () => handleSelectNode(point),
+                  touchstart: () => handleSelectNode(point),
+                  click: () => handleSelectNode(point),
+                  popupopen: () => handleSelectNode(point),
                   mouseover: () => setHovered(point),
                   mouseout: () => setHovered(null),
                 }}
               >
-                {isSelected && (
-                  <CircleMarker
-                    center={[point.lat, point.lng]}
-                    radius={18}
-                    pathOptions={{
-                      color: "#fff",
-                      weight: 2,
-                      fillColor: typeConfig.color,
-                      fillOpacity: 0.2,
-                    }}
-                  />
-                )}
+                <Popup autoPan={false}>
+                  <div style={{ minWidth: "220px" }}>
+                    <DossierPopupButton
+                      point={point}
+                      onSelectNode={handleSelectNode}
+                      color={typeConfig.color}
+                    />
 
-                <Popup>
-                  <b>{point.title}</b>
-                  <br />
-                  {point.description}
+                    <div
+                      style={{
+                        background: typeConfig.color,
+                        color: "white",
+                        padding: "8px",
+                        marginBottom: "10px",
+                        borderRadius: "6px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {typeConfig.shortLabel} - {typeConfig.label}
+                    </div>
+
+                    <strong>{point.title || "Untitled node"}</strong>
+                    <div style={{ marginTop: "6px", fontSize: "13px" }}>
+                      {point.description || "No description available."}
+                    </div>
+                  </div>
                 </Popup>
+
               </Marker>
             );
           })}
         </MarkerClusterGroup>
+
+        {selectedNode &&
+          Number.isFinite(selectedNode.lat) &&
+          Number.isFinite(selectedNode.lng) && (
+            <CircleMarker
+              center={[selectedNode.lat, selectedNode.lng]}
+              radius={18}
+              pathOptions={{
+                color: "#ffffff",
+                weight: 2,
+                fillColor: getIntelTypeConfig(selectedNode.type).color,
+                fillOpacity: 0.2,
+              }}
+            />
+          )}
       </MapContainer>
+
+      {!renderedPoints.length && (
+        <div className="map-empty-state">
+          <div className="map-empty-kicker">No visible nodes</div>
+          <h3 className="map-empty-title">Your current filters returned nothing</h3>
+          <p className="map-empty-copy">
+            Clear the search term, change the active type, or import a new dataset.
+          </p>
+        </div>
+      )}
 
       {hovered && (
         <div className="map-hover-card">
-          <strong>{hovered.title}</strong>
-          <div>{hovered.description}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <span
+              style={{
+                display: "inline-block",
+                width: "14px",
+                height: "14px",
+                borderRadius: "50%",
+                background: getIntelTypeConfig(hovered.type)?.color || "#888",
+              }}
+            />
+            <strong>{hovered.title}</strong>
+          </div>
+
+          <div style={{ fontSize: "12px", opacity: 0.82, marginTop: "8px" }}>
+            Type: {getIntelTypeConfig(hovered.type)?.shortLabel || hovered.type}
+          </div>
+
+          {hovered.description && (
+            <div style={{ fontSize: "12px", marginTop: "6px" }}>
+              {hovered.description}
+            </div>
+          )}
+
+          {hovered.image_url && (
+            <img
+              src={hovered.image_url}
+              alt={hovered.title || "preview"}
+              style={{
+                width: "100%",
+                marginTop: "8px",
+                borderRadius: "6px",
+              }}
+            />
+          )}
         </div>
       )}
     </div>

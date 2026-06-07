@@ -36,24 +36,40 @@ function FileUpload({ onDataLoaded }) {
     });
   };
 
+  // 🔥 FINAL CLEAN IMPORT HANDLER
   const completeImport = (nodes, source) => {
     if (!Array.isArray(nodes) || !nodes.length) {
-      setError("No valid records were found. Ensure your file contains latitude and longitude columns.");
+      setError(
+        "No valid records were found. Ensure your file contains latitude and longitude columns.",
+      );
       return;
     }
-    // Check for missing or invalid coordinates in any record
+
     const invalid = nodes.find(
       (n) =>
-        n.lat === undefined || n.lng === undefined ||
-        n.lat === null || n.lng === null ||
-        Number.isNaN(Number(n.lat)) || Number.isNaN(Number(n.lng))
+        n.lat == null ||
+        n.lng == null ||
+        Number.isNaN(Number(n.lat)) ||
+        Number.isNaN(Number(n.lng)),
     );
+
     if (invalid) {
-      setError("Some records are missing valid coordinates. Please check your data.");
+      setError(
+        "Some records are missing valid coordinates. Please check your data.",
+      );
       return;
     }
+
+    // ✅ Normalize everything (critical fix)
+    const cleaned = nodes.map((n) => ({
+      ...n,
+      lat: Number(n.lat),
+      lng: Number(n.lng),
+      type: n.type?.trim().toUpperCase() || "OSINT",
+    }));
+
     setError("");
-    onDataLoaded(nodes, source);
+    onDataLoaded(cleaned, source);
   };
 
   const processCsvFile = (file) =>
@@ -68,44 +84,41 @@ function FileUpload({ onDataLoaded }) {
           }
           resolve(normalizeNodes(results.data));
         },
-        error: () => reject(new Error(`Failed to parse file: ${file.name}. Please check the file format.`)),
+        error: () =>
+          reject(
+            new Error(
+              `Failed to parse file: ${file.name}. Please check format.`,
+            ),
+          ),
       });
     });
 
   const processStructuredFile = async (file) => {
     const extension = file.name.split(".").pop()?.toLowerCase();
-    try {
-      if (extension === "csv") {
-        const nodes = await processCsvFile(file);
-        completeImport(nodes, "csv");
-        return;
-      }
-      if (extension === "json") {
-        const text = await readFileAsText(file);
-        let nodes;
-        try {
-          nodes = parseJsonNodes(text);
-        } catch (e) {
-          throw new Error("JSON file format is invalid or unsupported.");
-        }
-        completeImport(nodes, "json");
-        return;
-      }
-      if (extension === "xlsx" || extension === "xls") {
-        const data = await readFileAsArrayBuffer(file);
-        let nodes;
-        try {
-          nodes = parseExcelNodes(data);
-        } catch (e) {
-          throw new Error("Excel file format is invalid or unsupported.");
-        }
-        completeImport(nodes, "excel");
-        return;
-      }
-      throw new Error("Unsupported file type. Only CSV, JSON, XLSX, and XLS are supported.");
-    } catch (err) {
-      throw err;
+
+    if (extension === "csv") {
+      const nodes = await processCsvFile(file);
+      completeImport(nodes, "csv");
+      return;
     }
+
+    if (extension === "json") {
+      const text = await readFileAsText(file);
+      const nodes = parseJsonNodes(text);
+      completeImport(nodes, "json");
+      return;
+    }
+
+    if (extension === "xlsx" || extension === "xls") {
+      const data = await readFileAsArrayBuffer(file);
+      const nodes = parseExcelNodes(data);
+      completeImport(nodes, "excel");
+      return;
+    }
+
+    throw new Error(
+      "Unsupported file type. Only CSV, JSON, XLSX, XLS, or images are allowed.",
+    );
   };
 
   const processImageFile = async (file) => {
@@ -115,10 +128,12 @@ function FileUpload({ onDataLoaded }) {
       image_url: imageUrl,
       fileName: file.name,
     });
+
     setImageMeta((prev) => ({
       ...prev,
       title: prev.title || file.name.replace(/\.[^.]+$/, ""),
     }));
+
     setError("");
   };
 
@@ -127,16 +142,22 @@ function FileUpload({ onDataLoaded }) {
       setError("No file selected.");
       return;
     }
+
     setIsProcessing(true);
+
     try {
       const extension = file.name.split(".").pop()?.toLowerCase();
+
       if (["jpg", "jpeg", "png"].includes(extension)) {
         await processImageFile(file);
       } else {
         await processStructuredFile(file);
       }
     } catch (err) {
-      setError(err.message || "Unable to import file. Please check the file format and try again.");
+      setError(
+        err.message ||
+          "Unable to import file. Please check the format and try again.",
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -145,34 +166,36 @@ function FileUpload({ onDataLoaded }) {
   const handleDrop = async (e) => {
     e.preventDefault();
     setIsDragging(false);
-    const file = e.dataTransfer.files[0];
-    await processFile(file);
+    await processFile(e.dataTransfer.files[0]);
   };
 
   const handleFile = async (e) => {
-    const file = e.target.files[0];
-    await processFile(file);
+    await processFile(e.target.files[0]);
     e.target.value = "";
   };
 
   const handleImageSubmit = (e) => {
     e.preventDefault();
+
     const lat = parseFloat(imageMeta.lat);
     const lng = parseFloat(imageMeta.lng);
+
     if (Number.isNaN(lat) || Number.isNaN(lng) || !imageMeta.title.trim()) {
-      setError("Latitude, longitude, and title are required for image uploads.");
+      setError("Latitude, longitude, and title are required.");
       return;
     }
+
     if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-      setError("Coordinates must be within valid ranges: latitude (-90 to 90), longitude (-180 to 180).");
+      setError("Coordinates out of valid range.");
       return;
     }
+
     completeImport(
       [
         {
           lat,
           lng,
-          type: imageMeta.type,
+          type: imageMeta.type?.trim().toUpperCase(),
           title: imageMeta.title.trim(),
           description: imageMeta.description.trim(),
           image_url: pendingImage.image_url,
@@ -180,6 +203,7 @@ function FileUpload({ onDataLoaded }) {
       ],
       "image",
     );
+
     resetImageForm();
   };
 
@@ -194,14 +218,14 @@ function FileUpload({ onDataLoaded }) {
         onDrop={handleDrop}
         style={{
           padding: "24px",
-          border: `2px dashed ${isDragging ? "#4eb6ff" : "rgba(135,163,191,0.22)"}`,
+          border: `2px dashed ${
+            isDragging ? "#4eb6ff" : "rgba(135,163,191,0.22)"
+          }`,
           borderRadius: "14px",
           textAlign: "center",
           background: isDragging ? "rgba(28,52,74,0.72)" : "#0b141d",
         }}
       >
-        {isProcessing && <p style={statusStyle}>Processing file...</p>}
-        {error && <div style={errorStyle}>{error}</div>}
         <input
           type="file"
           accept=".csv,.json,.xlsx,.xls,.jpg,.jpeg,.png"
@@ -209,15 +233,17 @@ function FileUpload({ onDataLoaded }) {
           style={{ display: "none" }}
           id="fileInput"
         />
-        <label htmlFor="fileInput" style={{ cursor: "pointer", display: "block" }}>
-          <h3 style={{ marginTop: 0 }}>Upload Intelligence Data</h3>
-          <p>Drag and drop or click to import CSV, JSON, Excel, or imagery</p>
+
+        <label
+          htmlFor="fileInput"
+          style={{ cursor: "pointer", display: "block" }}
+        >
+          <h3>Upload Intelligence Data</h3>
+          <p>Drag & drop or click to import files</p>
           <p style={helpTextStyle}>
-            Structured files need lat/lng plus optional type, title, description, image_url
+            CSV/JSON/Excel require lat/lng. Images create IMINT nodes.
           </p>
-          <p style={helpTextStyle}>
-            Image files open an IMINT form so you can place the image on the map
-          </p>
+
           {isProcessing && <p style={statusStyle}>Processing file...</p>}
         </label>
       </div>
@@ -226,40 +252,52 @@ function FileUpload({ onDataLoaded }) {
 
       {pendingImage && (
         <form onSubmit={handleImageSubmit} style={imageFormStyle}>
-          <h4 style={{ marginTop: 0, marginBottom: "10px" }}>Create IMINT Node</h4>
+          <h4>Create IMINT Node</h4>
+
           <img
             src={pendingImage.image_url}
             alt={pendingImage.fileName}
             style={previewImageStyle}
           />
+
           <input
             type="text"
             value={imageMeta.title}
-            placeholder="Image title"
-            onChange={(e) => setImageMeta({ ...imageMeta, title: e.target.value })}
+            placeholder="Title"
+            onChange={(e) =>
+              setImageMeta({ ...imageMeta, title: e.target.value })
+            }
             style={inputStyle}
           />
+
           <div style={coordinateGridStyle}>
             <input
               type="number"
               step="any"
-              value={imageMeta.lat}
               placeholder="Latitude"
-              onChange={(e) => setImageMeta({ ...imageMeta, lat: e.target.value })}
+              value={imageMeta.lat}
+              onChange={(e) =>
+                setImageMeta({ ...imageMeta, lat: e.target.value })
+              }
               style={inputStyle}
             />
             <input
               type="number"
               step="any"
-              value={imageMeta.lng}
               placeholder="Longitude"
-              onChange={(e) => setImageMeta({ ...imageMeta, lng: e.target.value })}
+              value={imageMeta.lng}
+              onChange={(e) =>
+                setImageMeta({ ...imageMeta, lng: e.target.value })
+              }
               style={inputStyle}
             />
           </div>
+
           <select
             value={imageMeta.type}
-            onChange={(e) => setImageMeta({ ...imageMeta, type: e.target.value })}
+            onChange={(e) =>
+              setImageMeta({ ...imageMeta, type: e.target.value })
+            }
             style={inputStyle}
           >
             {Object.entries(INTELLIGENCE_TYPE_CONFIG).map(([type, config]) => (
@@ -268,19 +306,25 @@ function FileUpload({ onDataLoaded }) {
               </option>
             ))}
           </select>
+
           <textarea
-            value={imageMeta.description}
             placeholder="Description"
+            value={imageMeta.description}
             onChange={(e) =>
               setImageMeta({ ...imageMeta, description: e.target.value })
             }
             style={{ ...inputStyle, minHeight: "90px" }}
           />
+
           <div style={buttonRowStyle}>
             <button type="submit" style={primaryButtonStyle}>
               Add Image Node
             </button>
-            <button type="button" onClick={resetImageForm} style={secondaryButtonStyle}>
+            <button
+              type="button"
+              onClick={resetImageForm}
+              style={secondaryButtonStyle}
+            >
               Cancel
             </button>
           </div>
@@ -312,7 +356,6 @@ const statusStyle = {
   fontSize: "12px",
   color: "#7cc7ff",
   marginTop: "10px",
-  marginBottom: 0,
 };
 
 const errorStyle = {

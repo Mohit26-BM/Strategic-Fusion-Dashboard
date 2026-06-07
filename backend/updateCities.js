@@ -34,8 +34,6 @@ async function run() {
       {
         $set: {
           city,
-          title: `${city} - ${doc.title}`,
-          description: `${city}: ${doc.description || ""}`,
         },
       },
     );

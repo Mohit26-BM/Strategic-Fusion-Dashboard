@@ -12,9 +12,16 @@ import {
   fetchIntelligence,
   addIntelligence,
   bulkAddIntelligence,
+  updateIntelligence,
+  deleteIntelligence,
 } from "./services/api";
 import { normalizeIntelType } from "./utils/intelligenceTypes";
 import LandingPage from "./components/LandingPage";
+import {
+  NotificationDialog,
+  ConfirmDialog,
+  EditNodeDialog,
+} from "./components/ActionDialogs";
 
 const DEFAULT_SECTIONS = {
   ingestion: true,
@@ -34,16 +41,56 @@ function App() {
   const [sectionState, setSectionState] = useState(DEFAULT_SECTIONS);
   const [terrainConfig, setTerrainConfig] = useState(() => {
     const savedValue = window.localStorage.getItem("terrain-config");
+
     if (!savedValue) {
       return DEFAULT_TERRAIN_CONFIG;
     }
+
     try {
       return JSON.parse(savedValue);
-    } catch (error) {
-      console.error("Failed to parse terrain config:", error);
+    } catch {
       return DEFAULT_TERRAIN_CONFIG;
     }
   });
+  const [filterState, setFilterState] = useState({
+    search: "",
+    type: "all",
+    source: "all",
+  });
+  const [notification, setNotification] = useState(null);
+  const [editNode, setEditNode] = useState(null);
+  const [deleteDialog, setDeleteDialog] = useState(null);
+
+  const showNotification = useCallback((type, title, message) => {
+    setNotification({ type, title, message });
+  }, []);
+
+  const filterNodes = useCallback((nodes, filter) => {
+    let result = nodes;
+
+    if (filter.search) {
+      const term = filter.search.toLowerCase();
+      result = result.filter(
+        (node) =>
+          node.title?.toLowerCase().includes(term) ||
+          node.description?.toLowerCase().includes(term) ||
+          node.city?.toLowerCase().includes(term),
+      );
+    }
+
+    if (filter.type !== "all") {
+      result = result.filter(
+        (node) =>
+          node.type?.trim().toUpperCase() === filter.type.trim().toUpperCase(),
+      );
+    }
+
+    if (filter.source !== "all") {
+      result = result.filter((node) => (node.source || "unknown") === filter.source);
+    }
+
+    return result;
+  }, []);
 
   const loadFromMongoDB = useCallback(async () => {
     try {
@@ -53,17 +100,21 @@ function App() {
         ...item,
         lat: parseFloat(item.lat),
         lng: parseFloat(item.lng),
-        type: normalizeIntelType(item.type),
+        type: normalizeIntelType(item.type)?.toUpperCase(),
       }));
 
       setData(cleaned);
-      setFilteredData(cleaned);
       setSource("mongodb");
     } catch (error) {
       console.error("MongoDB connection failed:", error);
       setSource("none");
+      showNotification(
+        "error",
+        "Connection Failed",
+        error.message || "Unable to load intelligence nodes from MongoDB.",
+      );
     }
-  }, []);
+  }, [showNotification]);
 
   useEffect(() => {
     if (showDashboard) {
@@ -71,44 +122,173 @@ function App() {
     }
   }, [showDashboard, loadFromMongoDB]);
 
+  useEffect(() => {
+    setFilteredData(filterNodes(data, filterState));
+  }, [data, filterState, filterNodes]);
+
+  const handleFilterChange = useCallback((_, options = {}) => {
+    setFilterState({
+      search: options.search || "",
+      type: options.activeType || "all",
+      source: options.activeSource || "all",
+    });
+
+    if (options.shouldFocus && options.focusNode) {
+      setMapFocusRequest({
+        mode: "single",
+        lat: options.focusNode.lat,
+        lng: options.focusNode.lng,
+        timestamp: Date.now(),
+      });
+      return;
+    }
+
+    if (options.shouldFocus) {
+      setMapFocusRequest({
+        mode: "fit",
+        timestamp: Date.now(),
+      });
+    }
+  }, []);
+
   const handleAddNode = async (newNode) => {
     try {
       await addIntelligence(newNode);
+      await new Promise((resolve) => setTimeout(resolve, 500));
       await loadFromMongoDB();
+      showNotification(
+        "success",
+        "Node Added",
+        "The intelligence node was saved and added to the map.",
+      );
     } catch (error) {
       console.error("Failed to add node:", error);
-      alert("Failed to save node: " + error.message);
+      showNotification(
+        "error",
+        "Node Save Failed",
+        error.message || "The intelligence node could not be saved.",
+      );
     }
   };
 
   const handleImportedData = async (importedNodes) => {
     try {
       await bulkAddIntelligence(importedNodes);
+      await new Promise((resolve) => setTimeout(resolve, 500));
       await loadFromMongoDB();
-      alert(`Successfully imported ${importedNodes.length} nodes`);
+      showNotification(
+        "success",
+        "Import Complete",
+        `Successfully imported ${importedNodes.length} nodes.`,
+      );
     } catch (error) {
       console.error("Failed to import:", error);
-      alert("Import failed: " + error.message);
+      showNotification(
+        "error",
+        "Import Failed",
+        error.message || "The selected file could not be imported.",
+      );
     }
   };
 
-  const handleFilterChange = (filtered, options = {}) => {
-    setFilteredData(filtered);
-    if (options.shouldFocus && options.activeType !== "all") {
-      setMapFocusRequest({ type: options.activeType, timestamp: Date.now() });
+  const handleEditNode = (node) => {
+    if (!node?._id) {
+      showNotification(
+        "error",
+        "Edit Unavailable",
+        "This node does not have a database id, so it cannot be updated.",
+      );
+      return;
+    }
+
+    setEditNode(node);
+  };
+
+  const handleSaveNode = async (updates) => {
+    if (!editNode?._id) return;
+
+    try {
+      const response = await updateIntelligence(editNode._id, updates);
+      const updatedNode = {
+        ...(response.node || editNode),
+        lat: Number(response.node?.lat ?? updates.lat),
+        lng: Number(response.node?.lng ?? updates.lng),
+        type: normalizeIntelType(response.node?.type ?? updates.type)?.toUpperCase(),
+      };
+
+      setData((current) =>
+        current.map((node) => (node._id === editNode._id ? updatedNode : node)),
+      );
+      setSelectedNode(updatedNode);
+      setEditNode(null);
+      showNotification(
+        "success",
+        "Node Updated",
+        "The intelligence node details were updated successfully.",
+      );
+    } catch (error) {
+      console.error("Failed to update node:", error);
+      showNotification(
+        "error",
+        "Update Failed",
+        error.message || "The intelligence node could not be updated.",
+      );
+    }
+  };
+
+  const handleRequestDeleteNode = (node) => {
+    if (!node?._id) {
+      showNotification(
+        "error",
+        "Delete Unavailable",
+        "This node does not have a database id, so it cannot be deleted.",
+      );
+      return;
+    }
+
+    setDeleteDialog({
+      node,
+      title: "Delete this node?",
+      message: `This will permanently remove "${node.title || "Untitled node"}" from MongoDB.`,
+      confirmLabel: "Delete Node",
+    });
+  };
+
+  const handleConfirmDeleteNode = async () => {
+    const node = deleteDialog?.node;
+    if (!node?._id) return;
+
+    try {
+      await deleteIntelligence(node._id);
+      setData((current) => current.filter((item) => item._id !== node._id));
+      setSelectedNode((current) => (current?._id === node._id ? null : current));
+      setDeleteDialog(null);
+      showNotification(
+        "success",
+        "Node Deleted",
+        "The intelligence node was removed from the dashboard.",
+      );
+    } catch (error) {
+      console.error("Failed to delete node:", error);
+      showNotification(
+        "error",
+        "Delete Failed",
+        error.message || "The intelligence node could not be deleted.",
+      );
     }
   };
 
   const toggleSection = (key) => {
-    setSectionState((prev) => ({ ...prev, [key]: !prev[key] }));
+    setSectionState((current) => ({
+      ...current,
+      [key]: !current[key],
+    }));
   };
 
-  // SHOW LANDING PAGE IF NOT YET ENTERED
   if (!showDashboard) {
     return <LandingPage onEnter={() => setShowDashboard(true)} />;
   }
 
-  // SHOW DASHBOARD
   return (
     <div className="app-shell">
       <button
@@ -128,10 +308,6 @@ function App() {
         <div className="sidebar-header">
           <p className="sidebar-eyebrow">Strategic Fusion Dashboard</p>
           <h1 className="sidebar-title">Intelligence Control</h1>
-          <p className="sidebar-subtitle">
-            One workspace for ingestion, geospatial context, and rapid node
-            review.
-          </p>
 
           <div className="sidebar-metrics">
             <div className="metric-card">
@@ -150,7 +326,6 @@ function App() {
         <div className="sidebar-scroll">
           <SectionCard
             title="Ingestion"
-            description="Import structured intelligence records or create an imagery node from a local file."
             isOpen={sectionState.ingestion}
             onToggle={() => toggleSection("ingestion")}
           >
@@ -159,7 +334,6 @@ function App() {
 
           <SectionCard
             title="Manual Node"
-            description="Drop in a single report quickly when you already know the coordinates."
             isOpen={sectionState.manual}
             onToggle={() => toggleSection("manual")}
           >
@@ -168,19 +342,14 @@ function App() {
 
           <SectionCard
             title="Terrain Setup"
-            description="Anchor the map to a fixed mission image and tune how it sits on the geography."
             isOpen={sectionState.terrain}
             onToggle={() => toggleSection("terrain")}
           >
-            <TerrainMapControl
-              value={terrainConfig}
-              onChange={setTerrainConfig}
-            />
+            <TerrainMapControl value={terrainConfig} onChange={setTerrainConfig} />
           </SectionCard>
 
           <SectionCard
             title="Filters"
-            description="Narrow the common operating picture by keyword or intelligence type."
             isOpen={sectionState.filters}
             onToggle={() => toggleSection("filters")}
           >
@@ -190,6 +359,10 @@ function App() {
       </aside>
 
       <main className="map-stage">
+        <a className="map-help-button" href="/help.html" target="_blank" rel="noreferrer">
+          ?
+        </a>
+
         <MapView
           data={filteredData}
           onNodeClick={setSelectedNode}
@@ -202,33 +375,44 @@ function App() {
           node={selectedNode}
           visibleCount={filteredData.length}
           source={source}
+          onEdit={handleEditNode}
+          onDelete={handleRequestDeleteNode}
         />
 
-        <div className="map-legend-slot">
+        <div style={{ position: "absolute", bottom: 20, right: 20, zIndex: 1000 }}>
           <Legend count={filteredData.length} data={filteredData} />
         </div>
 
         <div className="map-status-pill">
-          Live View: {filteredData.length} nodes across {source.toUpperCase()}{" "}
-          intake
+          Live View: {filteredData.length} nodes ({source})
         </div>
       </main>
+
+      <NotificationDialog
+        notification={notification}
+        onClose={() => setNotification(null)}
+      />
+      <ConfirmDialog
+        dialog={deleteDialog}
+        onCancel={() => setDeleteDialog(null)}
+        onConfirm={handleConfirmDeleteNode}
+      />
+      <EditNodeDialog
+        node={editNode}
+        onCancel={() => setEditNode(null)}
+        onSave={handleSaveNode}
+      />
     </div>
   );
 }
 
-function SectionCard({ title, description, children, isOpen, onToggle }) {
+function SectionCard({ title, children, isOpen, onToggle }) {
   return (
     <section className="sidebar-section">
       <button type="button" className="section-toggle" onClick={onToggle}>
-        <div>
-          <h2 className="section-title">{title}</h2>
-          <p className="section-copy">{description}</p>
-        </div>
-        <span className={`section-chevron ${isOpen ? "is-open" : ""}`}>▾</span>
+        <h2>{title}</h2>
       </button>
-
-      {isOpen && <div className="section-body">{children}</div>}
+      {isOpen && <div>{children}</div>}
     </section>
   );
 }
