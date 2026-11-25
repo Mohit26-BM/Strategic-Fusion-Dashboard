@@ -12,6 +12,7 @@ import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
 import { markerIcons } from "../utils/markerIcons";
 import { getIntelTypeConfig } from "../utils/intelligenceTypes";
+import { isTerrainActive } from "../utils/terrain";
 
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
@@ -31,8 +32,10 @@ L.Icon.Default.mergeOptions({
 
 function TerrainViewport({ terrainConfig }) {
   const map = useMap();
-  const enabled = Boolean(terrainConfig?.enabled && terrainConfig?.imageUrl);
+  const enabled = isTerrainActive(terrainConfig);
+  const { south, west, north, east } = terrainConfig?.bounds || {};
 
+  // depends on the four edges only, so moving the opacity slider does not re-fit (and reset) the map each time
   useEffect(() => {
     if (!enabled) {
       map.setMaxBounds(null);
@@ -40,13 +43,13 @@ function TerrainViewport({ terrainConfig }) {
     }
 
     const bounds = [
-      [terrainConfig.bounds.south, terrainConfig.bounds.west],
-      [terrainConfig.bounds.north, terrainConfig.bounds.east],
+      [south, west],
+      [north, east],
     ];
 
     map.fitBounds(bounds, { padding: [30, 30] });
     map.setMaxBounds(bounds);
-  }, [map, terrainConfig, enabled]);
+  }, [map, enabled, south, west, north, east]);
 
   return null;
 }
@@ -140,6 +143,8 @@ function MapView({
   selectedNode,
   terrainConfig,
   focusRequest,
+  status = "ready",
+  totalCount = 0,
 }) {
   const [hovered, setHovered] = useState(null);
 
@@ -149,9 +154,8 @@ function MapView({
     }
   };
 
-  const terrainEnabled = Boolean(
-    terrainConfig?.enabled && terrainConfig?.imageUrl,
-  );
+  // the overlay is only drawn with an image, switched on, AND valid edges (bad bounds would make Leaflet throw)
+  const terrainEnabled = isTerrainActive(terrainConfig);
 
   const terrainBounds = terrainEnabled
     ? [
@@ -274,12 +278,32 @@ function MapView({
           )}
       </MapContainer>
 
-      {!renderedPoints.length && (
+      {status === "loading" && !renderedPoints.length && (
+        <div className="map-empty-state" role="status">
+          <div className="map-empty-kicker">Loading</div>
+          <h3 className="map-empty-title">Loading intelligence nodes…</h3>
+          <p className="map-empty-copy">
+            If the server was idle this can take up to a minute while it wakes up.
+          </p>
+        </div>
+      )}
+
+      {status === "ready" && !renderedPoints.length && totalCount === 0 && (
+        <div className="map-empty-state">
+          <div className="map-empty-kicker">Nothing here yet</div>
+          <h3 className="map-empty-title">There are no intelligence nodes</h3>
+          <p className="map-empty-copy">
+            Unlock editing, then import a CSV, JSON or Excel file, upload an image, or add a node by hand.
+          </p>
+        </div>
+      )}
+
+      {status === "ready" && !renderedPoints.length && totalCount > 0 && (
         <div className="map-empty-state">
           <div className="map-empty-kicker">No visible nodes</div>
           <h3 className="map-empty-title">Your current filters returned nothing</h3>
           <p className="map-empty-copy">
-            Clear the search term, change the active type, or import a new dataset.
+            Clear the search term or change the active type to see the {totalCount} nodes again.
           </p>
         </div>
       )}
