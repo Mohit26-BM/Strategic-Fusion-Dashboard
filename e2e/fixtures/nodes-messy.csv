@@ -1,0 +1,7 @@
+lat,lng,type,title,description
+12.97,77.59,OSINT,Bengaluru,ok
+abc,77,OSINT,Bad lat,x
+95.5,77,OSINT,Lat out of range,x
+12.9,190,OSINT,Lng out of range,x
+,,OSINT,Empty coords,x
+17.38,78.48,HUMINT,Hyderabad,ok
