@@ -176,7 +176,8 @@
       <article class="card">
         <h2>Core Workflow</h2>
         <ol>
-          <li><strong>Load data:</strong> Fetch existing MongoDB records or import CSV, JSON, Excel, and image files.</li>
+          <li><strong>Look around:</strong> Anyone can view the map, filter it and open dossiers. Changing data needs the access token: press <strong>Unlock editing</strong> and enter it.</li>
+          <li><strong>Load data:</strong> Import CSV, JSON, GeoJSON, Excel and image files. You see a preview, and which rows would be skipped, before anything is saved.</li>
           <li><strong>Add nodes:</strong> Use the manual node form when you already know the location and details.</li>
           <li><strong>Inspect nodes:</strong> Hover over markers for a quick preview or click a marker to open the dossier panel.</li>
           <li><strong>Maintain records:</strong> Use dossier actions to edit or delete MongoDB-backed nodes.</li>
@@ -191,7 +192,9 @@
           <li><code>HUMINT</code> Human Intelligence</li>
           <li><code>IMINT</code> Imagery Intelligence</li>
           <li>Additional MongoDB-backed types such as <code>SIGINT</code>, <code>CYBINT</code>, and <code>SEBINT</code></li>
-          <li>Imported records must include valid latitude and longitude values.</li>
+          <li>Every imported row needs a latitude and a longitude. Column names are not case-sensitive: <code>lat</code>, <code>Latitude</code>, <code>lng</code>, <code>lon</code>, <code>Longitude</code> all work, and so do <code>title</code>/<code>name</code>, <code>description</code>/<code>notes</code>, <code>source</code> and <code>type</code>.</li>
+          <li>Rows with a missing or impossible coordinate are skipped and listed with the reason. At most 5000 rows per file.</li>
+          <li>Pictures (JPEG, PNG, WebP, GIF) are shrunk in your browser before they are saved.</li>
         </ul>
       </article>
 
@@ -201,7 +204,8 @@
           <li>Markers are clustered when many nodes are close together.</li>
           <li>The hover card gives a fast preview without opening the full dossier.</li>
           <li>The legend shows intelligence types currently visible on the map.</li>
-          <li>Terrain Setup can pin a custom image overlay to real-world map bounds.</li>
+          <li>Terrain Setup pins your own picture to real-world edges (north, south, west, east, in degrees). It is saved in this browser, so it is still there after a reload.</li>
+          <li>The overlay warns you if the picture would look stretched or if some nodes lie outside it, and <strong>Fit area to my nodes</strong> sets the edges for you.</li>
         </ul>
       </article>
 
@@ -211,7 +215,7 @@
           <li><strong>Edit Details:</strong> Updates title, type, coordinates, source, image URL, and description.</li>
           <li><strong>Delete Node:</strong> Opens a confirmation dialog before removing a record.</li>
           <li>Success and error notifications appear in the center of the screen.</li>
-          <li>Update and delete require the node to have a MongoDB <code>_id</code>.</li>
+          <li>Edit and delete need <strong>Unlock editing</strong> first. Only the fields you change are sent.</li>
         </ul>
       </article>
 
@@ -220,8 +224,9 @@
         <ul>
           <li>AWS S3 integration is not implemented in this version.</li>
           <li>File ingestion is local and browser-based.</li>
-          <li>Terrain overlay bounds must be entered manually.</li>
-          <li>Reverse geocoding uses OpenStreetMap Nominatim, so rate limits may apply.</li>
+          <li>The terrain overlay cannot cross the 180° line, and it is stored only in your own browser (not shared with other people).</li>
+          <li>Place names come from OpenStreetMap Nominatim, one request per second, so a large import fills them in gradually after it finishes.</li>
+          <li>Access control is one shared access token (not individual accounts). Anyone with the token can add, import, edit and delete, so keep it private and change it on the server if it leaks.</li>
           <li>This is a prototype dashboard and should not be used for operational intelligence decisions.</li>
         </ul>
       </article>

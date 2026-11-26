@@ -4,6 +4,8 @@ function IntelligencePanel({
   node,
   visibleCount = 0,
   source = "none",
+  canEdit = false,
+  onRequestUnlock = () => {},
   onEdit = () => {},
   onDelete = () => {},
 }) {
@@ -74,20 +76,28 @@ function IntelligencePanel({
       </h3>
 
       <div className="dossier-action-row">
-        <button
-          type="button"
-          className="dossier-action-button"
-          onClick={() => onEdit(node)}
-        >
-          Edit Details
-        </button>
-        <button
-          type="button"
-          className="dossier-action-button dossier-action-button--danger"
-          onClick={() => onDelete(node)}
-        >
-          Delete Node
-        </button>
+        {canEdit ? (
+          <>
+            <button
+              type="button"
+              className="dossier-action-button"
+              onClick={() => onEdit(node)}
+            >
+              Edit Details
+            </button>
+            <button
+              type="button"
+              className="dossier-action-button dossier-action-button--danger"
+              onClick={() => onDelete(node)}
+            >
+              Delete Node
+            </button>
+          </>
+        ) : (
+          <button type="button" className="dossier-action-button" onClick={onRequestUnlock}>
+            Unlock editing to change this node
+          </button>
+        )}
       </div>
 
       {/* COORDINATES */}
@@ -100,6 +110,18 @@ function IntelligencePanel({
           <span className="dossier-meta-label">Longitude</span>
           <span className="dossier-meta-value">{safeLng}</span>
         </div>
+        {node.city && node.city !== "Unknown" && (
+          <div className="dossier-meta-card">
+            <span className="dossier-meta-label">Nearest place</span>
+            <span className="dossier-meta-value">{node.city}</span>
+          </div>
+        )}
+        {node.source && (
+          <div className="dossier-meta-card">
+            <span className="dossier-meta-label">Source</span>
+            <span className="dossier-meta-value">{node.source}</span>
+          </div>
+        )}
       </div>
 
       {/* DESCRIPTION */}

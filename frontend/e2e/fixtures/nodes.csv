@@ -1,0 +1,6 @@
+lat,lng,type,title,description,source
+28.6139,77.209,"OSINT","Delhi relay","Open-source report of relay traffic","wire"
+19.076,72.8777,"HUMINT","Mumbai contact","Meeting at port","field"
+13.0827,80.2707,"IMINT","Chennai harbour","Imagery pass","sat"
+22.5726,88.3639,"SIGINT","Kolkata intercept","Signals","sat"
+26.9124,75.7873,"CYBINT","Jaipur server","Cyber","wire"

@@ -176,6 +176,8 @@ code {
 
 .map-stage {
   position: relative;
+  /* contain the map's own z-index values (Leaflet uses 200-1000), so the phone drawer and its toggle button stay on top */
+  isolation: isolate;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -192,13 +194,12 @@ code {
 .map-help-button {
   position: absolute;
   top: 18px;
-  left: 50%;
+  right: 18px; /* top-right corner: where people look for help, and clear of the dossier card on the left */
   z-index: 1400;
   display: inline-grid;
   place-items: center;
   width: 42px;
   height: 42px;
-  transform: translateX(-50%);
   border: 1px solid rgba(124, 199, 255, 0.34);
   border-radius: 999px;
   background: rgba(7, 16, 24, 0.9);
@@ -248,13 +249,12 @@ code {
 
 .map-empty-state {
   position: absolute;
-  top: auto;
-  right: 18px;
-  bottom: 18px;
-  left: auto;
-  inset: auto 18px 18px auto;
-  width: min(360px, calc(100% - 36px));
-  padding: 16px;
+  /* centred, so it never sits on top of the legend or the dossier panel */
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(380px, calc(100% - 36px));
+  padding: 18px;
   border-radius: 16px;
   background: rgba(7, 16, 24, 0.9);
   border: 1px solid rgba(135, 163, 191, 0.14);
@@ -586,6 +586,7 @@ code {
   .app-sidebar-scrim.is-visible {
     display: block;
     position: fixed;
+    /* Fallback for Safari < 14.5 */
     top: 0;
     right: 0;
     bottom: 0;
@@ -603,6 +604,11 @@ code {
     transform: translateX(-100%);
     transition: transform 180ms ease;
     box-shadow: 0 0 40px rgba(0, 0, 0, 0.45);
+    z-index: 40; /* above the dimming overlay (35), which must only cover the map */
+  }
+
+  .sidebar-header {
+    padding-top: 62px; /* room for the Open/Close controls button, which floats over the drawer's top corner */
   }
 
   .app-sidebar.is-open {
@@ -625,9 +631,10 @@ code {
   }
 
   .map-help-button {
+    /* on a phone the Open/Close controls button owns the top-right corner, so help goes top-left */
     top: 14px;
+    right: auto;
     left: 14px;
-    transform: none;
   }
 
   .map-legend-slot {
@@ -672,9 +679,12 @@ code {
   }
 
   .map-empty-state {
+    top: auto;
+    bottom: 88px;
     left: 12px;
     right: 12px;
     width: auto;
+    transform: none;
   }
 }
 
@@ -697,5 +707,453 @@ code {
   50% {
     transform: scale(1.1);
     opacity: 0.8;
+  }
+}
+
+/* =====================================================================================================
+   Added with the access-token, ingestion and terrain improvements
+   ===================================================================================================== */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+:focus-visible {
+  outline: 2px solid #7cc7ff;
+  outline-offset: 2px;
+}
+
+.section-chevron {
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* ---- access ---- */
+.access-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(135, 163, 191, 0.16);
+  border-radius: 12px;
+  background: rgba(11, 20, 29, 0.8);
+  color: #c8d6e3;
+  font-size: 13px;
+}
+
+.access-bar > span:nth-child(2) {
+  flex: 1;
+}
+
+.access-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #8da1b5;
+  flex: none;
+}
+
+.access-bar--on .access-dot {
+  background: #4ade80;
+  box-shadow: 0 0 8px rgba(74, 222, 128, 0.7);
+}
+
+.access-bar--off .access-dot {
+  background: #f59e0b;
+}
+
+.access-button {
+  border: 1px solid rgba(124, 199, 255, 0.4);
+  background: rgba(63, 178, 255, 0.12);
+  color: #bfe3ff;
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.access-button:hover {
+  background: rgba(63, 178, 255, 0.24);
+}
+
+.locked-note {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  padding: 12px;
+  border: 1px dashed rgba(135, 163, 191, 0.3);
+  border-radius: 12px;
+  color: #aebfce;
+  font-size: 13px;
+}
+
+.locked-note p {
+  margin: 0;
+}
+
+.reload-button {
+  margin-top: 10px;
+  width: 100%;
+  border: 1px solid rgba(135, 163, 191, 0.16);
+  background: transparent;
+  color: #c8d6e3;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.reload-button:hover:not(:disabled) {
+  background: rgba(135, 163, 191, 0.1);
+}
+
+.reload-button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.status-ready {
+  color: #4ade80;
+}
+
+.status-error {
+  color: #f87171;
+}
+
+.status-loading {
+  color: #fbbf24;
+}
+
+.load-banner {
+  position: absolute;
+  top: 18px;
+  right: 72px; /* just left of the help button in the top-right corner */
+  z-index: 1450;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: clamp(280px, calc(100% - 420px), 440px);
+  padding: 10px 14px;
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  border-radius: 14px;
+  background: rgba(53, 18, 18, 0.94);
+  color: #ffd2d2;
+  font-size: 13px;
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.35);
+}
+
+.load-banner button {
+  flex: none;
+  border: 1px solid rgba(255, 210, 210, 0.5);
+  background: transparent;
+  color: #fff;
+  border-radius: 999px;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+
+/* ---- forms ---- */
+.node-form,
+.upload,
+.terrain {
+  display: grid;
+  gap: 12px;
+}
+
+.field {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.field-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #c8d6e3;
+}
+
+.field-hint {
+  font-weight: 400;
+  color: #8da1b5;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid rgba(135, 163, 191, 0.18);
+  border-radius: 10px;
+  background: #0b141d;
+  color: #edf3f8;
+  font-size: 14px;
+}
+
+.field input[aria-invalid="true"] {
+  border-color: rgba(248, 113, 113, 0.7);
+}
+
+.field-error {
+  font-size: 12px;
+  color: #ff9d9d;
+}
+
+.hint {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #8da1b5;
+}
+
+.status {
+  font-size: 12px;
+  color: #7cc7ff;
+}
+
+.form-error,
+.form-warning {
+  margin: 0;
+  padding: 9px 11px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.form-error {
+  border: 1px solid rgba(248, 113, 113, 0.45);
+  background: rgba(203, 43, 62, 0.14);
+  color: #ffc2c8;
+}
+
+.form-warning {
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  background: rgba(251, 191, 36, 0.1);
+  color: #fde3a1;
+}
+
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.btn-primary,
+.btn-secondary {
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.btn-primary {
+  flex: 1;
+  border: 0;
+  background: linear-gradient(135deg, #1e88d7, #3fb2ff);
+  color: #fff;
+  font-weight: 700;
+}
+
+.btn-secondary {
+  border: 1px solid rgba(135, 163, 191, 0.2);
+  background: transparent;
+  color: #c8d6e3;
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: rgba(135, 163, 191, 0.1);
+}
+
+.check-row,
+.range-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #dbe5ee;
+}
+
+.range-row {
+  justify-content: space-between;
+  color: #c8d1dc;
+}
+
+.terrain input[type="range"] {
+  width: 100%;
+}
+
+.bounds {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid rgba(135, 163, 191, 0.16);
+  border-radius: 12px;
+}
+
+.bounds legend {
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #c8d6e3;
+}
+
+/* ---- ingestion ---- */
+.dropzone {
+  border: 2px dashed rgba(135, 163, 191, 0.26);
+  border-radius: 14px;
+  background: #0b141d;
+  text-align: center;
+  transition: border-color 120ms, background 120ms;
+}
+
+.dropzone.is-dragging,
+.dropzone:focus-within {
+  border-color: #4eb6ff;
+  background: rgba(28, 52, 74, 0.72);
+}
+
+.dropzone-label {
+  display: grid;
+  gap: 6px;
+  padding: 22px 16px;
+  cursor: pointer;
+  color: #dbe5ee;
+  font-size: 14px;
+}
+
+.import-preview {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(135, 163, 191, 0.16);
+  border-radius: 14px;
+  background: #0b141d;
+  color: #dbe5ee;
+  font-size: 13px;
+}
+
+.import-preview h4,
+.import-preview p {
+  margin: 0;
+}
+
+.skipped {
+  font-size: 12px;
+  color: #fde3a1;
+}
+
+.skipped summary {
+  cursor: pointer;
+}
+
+.skipped ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  max-height: 140px;
+  overflow: auto;
+}
+
+.progress {
+  position: relative;
+  height: 24px;
+  border-radius: 8px;
+  background: rgba(135, 163, 191, 0.14);
+  overflow: hidden;
+}
+
+.progress-bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: linear-gradient(90deg, #1e88d7, #3fb2ff);
+  transition: width 160ms;
+}
+
+.progress span {
+  position: relative;
+  display: block;
+  line-height: 24px;
+  text-align: center;
+  font-size: 12px;
+  color: #fff;
+}
+
+.image-preview {
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+/* ---- dialogs ---- */
+.dialog-card--warning {
+  border-color: rgba(251, 191, 36, 0.4);
+}
+
+.dialog-details {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  max-height: 180px;
+  overflow: auto;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #c8d6e3;
+}
+
+.dialog-hint {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: #8da1b5;
+}
+
+.boundary {
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  align-content: center;
+  height: 100%;
+  padding: 24px;
+  background: #071018;
+  color: #eef5fb;
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .field-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .load-banner {
+    top: 64px;
+    left: 12px;
+    right: 12px;
+    width: auto;
   }
 }

@@ -1,286 +1,288 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Papa from "papaparse";
-import {
-  parseExcelNodes,
-  parseJsonNodes,
-  normalizeNodes,
-} from "../utils/intelligenceImport";
-import {
-  readFileAsArrayBuffer,
-  readFileAsDataUrl,
-  readFileAsText,
-} from "../utils/fileReaders";
+import { describeSkipped, normalizeCsvRows, parseExcelNodes, parseJsonNodes } from "../utils/intelligenceImport";
+import { readFileAsArrayBuffer, readFileAsText } from "../utils/fileReaders";
+import { resizeImageFile, validateImageFile } from "../utils/imageResize";
 import { INTELLIGENCE_TYPE_CONFIG } from "../utils/intelligenceTypes";
 
+const MAX_TABLE_FILE_BYTES = 10 * 1024 * 1024;
+const IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "webp", "gif"];
+
+function parseCsv(file) {
+  return new Promise((resolve, reject) => {
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: "greedy",
+      transformHeader: (header) => header.replace(/^﻿/, "").trim(),
+      complete: (results) => {
+        if (!Array.isArray(results.data)) return reject(new Error("That CSV file is empty or in an unknown format."));
+        try {
+          resolve(normalizeCsvRows(results.data));
+        } catch (err) {
+          reject(err);
+        }
+      },
+      error: () => reject(new Error(`Could not read ${file.name}. Is it a CSV file?`)),
+    });
+  });
+}
+
+async function parseTable(file) {
+  const extension = file.name.split(".").pop()?.toLowerCase();
+  if (file.size > MAX_TABLE_FILE_BYTES) {
+    throw new Error(`That file is ${(file.size / 1048576).toFixed(1)} MB; the limit is ${MAX_TABLE_FILE_BYTES / 1048576} MB.`);
+  }
+  if (extension === "csv") return { ...(await parseCsv(file)), source: "csv" };
+  if (extension === "json" || extension === "geojson") return { ...parseJsonNodes(await readFileAsText(file)), source: "json" };
+  if (extension === "xlsx" || extension === "xls") return { ...parseExcelNodes(await readFileAsArrayBuffer(file)), source: "excel" };
+  throw new Error("Unsupported file type. Use CSV, JSON, GeoJSON, XLSX, XLS or a JPEG / PNG / WebP / GIF image.");
+}
+
+/**
+ * @param {{ onDataLoaded: (nodes: object[], meta: object, onProgress: (done: number, total: number) => void) => Promise<void> }} props
+ */
 function FileUpload({ onDataLoaded }) {
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [pending, setPending] = useState(null); // a parsed file waiting for "Import"
   const [pendingImage, setPendingImage] = useState(null);
-  const [imageMeta, setImageMeta] = useState({
-    lat: "",
-    lng: "",
-    title: "",
-    description: "",
-    type: "IMINT",
-  });
+  const [progress, setProgress] = useState(null);
+  const [imageErrors, setImageErrors] = useState({});
+  const [imageMeta, setImageMeta] = useState({ lat: "", lng: "", title: "", description: "", type: "IMINT" });
+  const inputRef = useRef(null);
 
   const resetImageForm = () => {
     setPendingImage(null);
-    setImageMeta({
-      lat: "",
-      lng: "",
-      title: "",
-      description: "",
-      type: "IMINT",
-    });
-  };
-
-  const completeImport = (nodes, source) => {
-    if (!Array.isArray(nodes) || !nodes.length) {
-      setError("No valid records were found. Ensure your file contains latitude and longitude columns.");
-      return;
-    }
-    // Check for missing or invalid coordinates in any record
-    const invalid = nodes.find(
-      (n) =>
-        n.lat === undefined || n.lng === undefined ||
-        n.lat === null || n.lng === null ||
-        Number.isNaN(Number(n.lat)) || Number.isNaN(Number(n.lng))
-    );
-    if (invalid) {
-      setError("Some records are missing valid coordinates. Please check your data.");
-      return;
-    }
-    setError("");
-    onDataLoaded(nodes, source);
-  };
-
-  const processCsvFile = (file) =>
-    new Promise((resolve, reject) => {
-      Papa.parse(file, {
-        header: true,
-        skipEmptyLines: true,
-        complete: (results) => {
-          if (!Array.isArray(results.data)) {
-            reject(new Error("CSV format is invalid or empty."));
-            return;
-          }
-          resolve(normalizeNodes(results.data));
-        },
-        error: () => reject(new Error(`Failed to parse file: ${file.name}. Please check the file format.`)),
-      });
-    });
-
-  const processStructuredFile = async (file) => {
-    const extension = file.name.split(".").pop()?.toLowerCase();
-    try {
-      if (extension === "csv") {
-        const nodes = await processCsvFile(file);
-        completeImport(nodes, "csv");
-        return;
-      }
-      if (extension === "json") {
-        const text = await readFileAsText(file);
-        let nodes;
-        try {
-          nodes = parseJsonNodes(text);
-        } catch (e) {
-          throw new Error("JSON file format is invalid or unsupported.");
-        }
-        completeImport(nodes, "json");
-        return;
-      }
-      if (extension === "xlsx" || extension === "xls") {
-        const data = await readFileAsArrayBuffer(file);
-        let nodes;
-        try {
-          nodes = parseExcelNodes(data);
-        } catch (e) {
-          throw new Error("Excel file format is invalid or unsupported.");
-        }
-        completeImport(nodes, "excel");
-        return;
-      }
-      throw new Error("Unsupported file type. Only CSV, JSON, XLSX, and XLS are supported.");
-    } catch (err) {
-      throw err;
-    }
-  };
-
-  const processImageFile = async (file) => {
-    const imageUrl = await readFileAsDataUrl(file);
-
-    setPendingImage({
-      image_url: imageUrl,
-      fileName: file.name,
-    });
-    setImageMeta((prev) => ({
-      ...prev,
-      title: prev.title || file.name.replace(/\.[^.]+$/, ""),
-    }));
-    setError("");
+    setImageErrors({});
+    setImageMeta({ lat: "", lng: "", title: "", description: "", type: "IMINT" });
   };
 
   const processFile = async (file) => {
-    if (!file) {
-      setError("No file selected.");
-      return;
-    }
+    if (!file) return;
+    setError("");
+    setPending(null);
     setIsProcessing(true);
     try {
       const extension = file.name.split(".").pop()?.toLowerCase();
-      if (["jpg", "jpeg", "png"].includes(extension)) {
-        await processImageFile(file);
-      } else {
-        await processStructuredFile(file);
+
+      if (IMAGE_EXTENSIONS.includes(extension) || file.type.startsWith("image/")) {
+        const problem = validateImageFile(file);
+        if (problem) throw new Error(problem);
+        const resized = await resizeImageFile(file);
+        setPendingImage({ image_url: resized.dataUrl, fileName: file.name, ...resized });
+        setImageMeta((prev) => ({ ...prev, title: prev.title || file.name.replace(/\.[^.]+$/, "") }));
+        return;
       }
+
+      const result = await parseTable(file);
+      if (result.nodes.length === 0) {
+        const why = describeSkipped(result.skipped);
+        throw new Error(
+          result.total === 0
+            ? "That file has no rows."
+            : `None of the ${result.total} rows could be used. ${why ? `${why}.` : ""} The file needs latitude and longitude columns (for example lat, lng or Latitude, Longitude).`,
+        );
+      }
+      setPending({ ...result, fileName: file.name });
     } catch (err) {
-      setError(err.message || "Unable to import file. Please check the file format and try again.");
+      setError(err.message || "Unable to read that file. Please check the format and try again.");
     } finally {
       setIsProcessing(false);
     }
   };
 
+  const runImport = async (nodes, meta) => {
+    setError("");
+    setProgress({ done: 0, total: nodes.length });
+    try {
+      await onDataLoaded(nodes, meta, (done, total) => setProgress({ done, total }));
+      return true;
+    } catch (err) {
+      setError(err.message || "The import failed.");
+      return false;
+    } finally {
+      setProgress(null);
+    }
+  };
+
+  const confirmImport = async () => {
+    if (!pending) return;
+    const ok = await runImport(pending.nodes, {
+      source: pending.source,
+      fileName: pending.fileName,
+      total: pending.total,
+      skipped: pending.skipped,
+    });
+    if (ok) setPending(null);
+  };
+
   const handleDrop = async (e) => {
     e.preventDefault();
     setIsDragging(false);
-    const file = e.dataTransfer.files[0];
-    await processFile(file);
+    await processFile(e.dataTransfer.files?.[0]);
   };
 
   const handleFile = async (e) => {
-    const file = e.target.files[0];
-    await processFile(file);
+    const file = e.target.files?.[0];
     e.target.value = "";
+    await processFile(file);
   };
 
-  const handleImageSubmit = (e) => {
+  const submitImage = async (e) => {
     e.preventDefault();
+    const errors = {};
     const lat = parseFloat(imageMeta.lat);
     const lng = parseFloat(imageMeta.lng);
-    if (Number.isNaN(lat) || Number.isNaN(lng) || !imageMeta.title.trim()) {
-      setError("Latitude, longitude, and title are required for image uploads.");
-      return;
-    }
-    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-      setError("Coordinates must be within valid ranges: latitude (-90 to 90), longitude (-180 to 180).");
-      return;
-    }
-    completeImport(
+    if (!imageMeta.title.trim()) errors.title = "Give the image a title.";
+    if (imageMeta.lat === "" || Number.isNaN(lat)) errors.lat = "Latitude is required.";
+    else if (lat < -90 || lat > 90) errors.lat = "Latitude must be between -90 and 90.";
+    if (imageMeta.lng === "" || Number.isNaN(lng)) errors.lng = "Longitude is required.";
+    else if (lng < -180 || lng > 180) errors.lng = "Longitude must be between -180 and 180.";
+    setImageErrors(errors);
+    if (Object.keys(errors).length) return;
+
+    const ok = await runImport(
       [
         {
           lat,
           lng,
-          type: imageMeta.type,
+          type: imageMeta.type?.trim().toUpperCase() || "IMINT",
           title: imageMeta.title.trim(),
           description: imageMeta.description.trim(),
           image_url: pendingImage.image_url,
         },
       ],
-      "image",
+      { source: "image", fileName: pendingImage.fileName, total: 1, skipped: [] },
     );
-    resetImageForm();
+    if (ok) resetImageForm();
   };
 
+  const typeCounts = pending
+    ? Object.entries(
+        pending.nodes.reduce((acc, node) => {
+          acc[node.type] = (acc[node.type] || 0) + 1;
+          return acc;
+        }, {}),
+      )
+    : [];
+  const busy = isProcessing || Boolean(progress);
+
   return (
-    <div style={panelStyle}>
+    <div className="upload">
       <div
+        className={`dropzone ${isDragging ? "is-dragging" : ""}`}
         onDragOver={(e) => {
           e.preventDefault();
           setIsDragging(true);
         }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
-        style={{
-          padding: "24px",
-          border: `2px dashed ${isDragging ? "#4eb6ff" : "rgba(135,163,191,0.22)"}`,
-          borderRadius: "14px",
-          textAlign: "center",
-          background: isDragging ? "rgba(28,52,74,0.72)" : "#0b141d",
-        }}
       >
-        {isProcessing && <p style={statusStyle}>Processing file...</p>}
-        {error && <div style={errorStyle}>{error}</div>}
         <input
+          ref={inputRef}
           type="file"
-          accept=".csv,.json,.xlsx,.xls,.jpg,.jpeg,.png"
+          accept=".csv,.json,.geojson,.xlsx,.xls,.jpg,.jpeg,.png,.webp,.gif"
           onChange={handleFile}
-          style={{ display: "none" }}
+          className="visually-hidden"
           id="fileInput"
+          disabled={busy}
         />
-        <label htmlFor="fileInput" style={{ cursor: "pointer", display: "block" }}>
-          <h3 style={{ marginTop: 0 }}>Upload Intelligence Data</h3>
-          <p>Drag and drop or click to import CSV, JSON, Excel, or imagery</p>
-          <p style={helpTextStyle}>
-            Structured files need lat/lng plus optional type, title, description, image_url
-          </p>
-          <p style={helpTextStyle}>
-            Image files open an IMINT form so you can place the image on the map
-          </p>
-          {isProcessing && <p style={statusStyle}>Processing file...</p>}
+        <label htmlFor="fileInput" className="dropzone-label">
+          <strong>Upload intelligence data</strong>
+          <span>Drag a file here or click to choose one</span>
+          <span className="hint">CSV, JSON, GeoJSON, Excel: one row per node, with latitude and longitude. Images become IMINT nodes.</span>
+          {isProcessing && <span className="status">Reading file…</span>}
         </label>
       </div>
 
-      {error && <div style={errorStyle}>{error}</div>}
+      {error && <div className="form-error" role="alert">{error}</div>}
+
+      {pending && (
+        <div className="import-preview" role="region" aria-label="Import preview">
+          <h4>Ready to import</h4>
+          <p>
+            <strong>{pending.nodes.length}</strong> of {pending.total} rows from <em>{pending.fileName}</em>
+            {pending.sheet ? ` (sheet "${pending.sheet}")` : ""} can be imported.
+          </p>
+          {typeCounts.length > 0 && (
+            <p className="hint">{typeCounts.map(([type, count]) => `${count} ${type}`).join(" · ")}</p>
+          )}
+          {pending.skipped.length > 0 && (
+            <details className="skipped" open={pending.skipped.length <= 3}>
+              <summary>{pending.skipped.length} rows will be skipped</summary>
+              <ul>
+                {pending.skipped.slice(0, 20).map((s) => (
+                  <li key={s.row}>row {s.row}: {s.reason}</li>
+                ))}
+                {pending.skipped.length > 20 && <li>…and {pending.skipped.length - 20} more</li>}
+              </ul>
+            </details>
+          )}
+          {progress && (
+            <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={progress.total} aria-valuenow={progress.done}>
+              <div className="progress-bar" style={{ width: `${progress.total ? (progress.done / progress.total) * 100 : 0}%` }} />
+              <span>Importing {progress.done} / {progress.total}</span>
+            </div>
+          )}
+          <div className="btn-row">
+            <button type="button" className="btn-primary" onClick={confirmImport} disabled={busy}>
+              {progress ? "Importing…" : `Import ${pending.nodes.length} nodes`}
+            </button>
+            <button type="button" className="btn-secondary" onClick={() => setPending(null)} disabled={busy}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {pendingImage && (
-        <form onSubmit={handleImageSubmit} style={imageFormStyle}>
-          <h4 style={{ marginTop: 0, marginBottom: "10px" }}>Create IMINT Node</h4>
-          <img
-            src={pendingImage.image_url}
-            alt={pendingImage.fileName}
-            style={previewImageStyle}
-          />
-          <input
-            type="text"
-            value={imageMeta.title}
-            placeholder="Image title"
-            onChange={(e) => setImageMeta({ ...imageMeta, title: e.target.value })}
-            style={inputStyle}
-          />
-          <div style={coordinateGridStyle}>
-            <input
-              type="number"
-              step="any"
-              value={imageMeta.lat}
-              placeholder="Latitude"
-              onChange={(e) => setImageMeta({ ...imageMeta, lat: e.target.value })}
-              style={inputStyle}
-            />
-            <input
-              type="number"
-              step="any"
-              value={imageMeta.lng}
-              placeholder="Longitude"
-              onChange={(e) => setImageMeta({ ...imageMeta, lng: e.target.value })}
-              style={inputStyle}
-            />
+        <form onSubmit={submitImage} className="import-preview" noValidate>
+          <h4>Create IMINT node from image</h4>
+          <img src={pendingImage.image_url} alt={pendingImage.fileName} className="image-preview" />
+          <p className="hint">
+            Resized to {pendingImage.width} × {pendingImage.height} px ({Math.round(pendingImage.bytes / 1024)} KB)
+            {pendingImage.originalWidth > pendingImage.width ? ` from ${pendingImage.originalWidth} × ${pendingImage.originalHeight}` : ""}.
+          </p>
+
+          <div className="field">
+            <label className="field-label" htmlFor="img-title">Title</label>
+            <input id="img-title" type="text" value={imageMeta.title} onChange={(e) => setImageMeta({ ...imageMeta, title: e.target.value })} aria-invalid={Boolean(imageErrors.title)} />
+            {imageErrors.title && <span className="field-error">{imageErrors.title}</span>}
           </div>
-          <select
-            value={imageMeta.type}
-            onChange={(e) => setImageMeta({ ...imageMeta, type: e.target.value })}
-            style={inputStyle}
-          >
-            {Object.entries(INTELLIGENCE_TYPE_CONFIG).map(([type, config]) => (
-              <option key={type} value={type}>
-                {config.shortLabel} - {config.label}
-              </option>
-            ))}
-          </select>
-          <textarea
-            value={imageMeta.description}
-            placeholder="Description"
-            onChange={(e) =>
-              setImageMeta({ ...imageMeta, description: e.target.value })
-            }
-            style={{ ...inputStyle, minHeight: "90px" }}
-          />
-          <div style={buttonRowStyle}>
-            <button type="submit" style={primaryButtonStyle}>
-              Add Image Node
+
+          <div className="field-grid">
+            <div className="field">
+              <label className="field-label" htmlFor="img-lat">Latitude</label>
+              <input id="img-lat" type="number" step="any" value={imageMeta.lat} onChange={(e) => setImageMeta({ ...imageMeta, lat: e.target.value })} aria-invalid={Boolean(imageErrors.lat)} />
+              {imageErrors.lat && <span className="field-error">{imageErrors.lat}</span>}
+            </div>
+            <div className="field">
+              <label className="field-label" htmlFor="img-lng">Longitude</label>
+              <input id="img-lng" type="number" step="any" value={imageMeta.lng} onChange={(e) => setImageMeta({ ...imageMeta, lng: e.target.value })} aria-invalid={Boolean(imageErrors.lng)} />
+              {imageErrors.lng && <span className="field-error">{imageErrors.lng}</span>}
+            </div>
+          </div>
+
+          <div className="field">
+            <label className="field-label" htmlFor="img-type">Type</label>
+            <select id="img-type" value={imageMeta.type} onChange={(e) => setImageMeta({ ...imageMeta, type: e.target.value })}>
+              {Object.entries(INTELLIGENCE_TYPE_CONFIG).map(([type, config]) => (
+                <option key={type} value={type}>{config.shortLabel} - {config.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="field">
+            <label className="field-label" htmlFor="img-desc">Description</label>
+            <textarea id="img-desc" rows={3} value={imageMeta.description} onChange={(e) => setImageMeta({ ...imageMeta, description: e.target.value })} />
+          </div>
+
+          <div className="btn-row">
+            <button type="submit" className="btn-primary" disabled={busy}>
+              {progress ? "Saving…" : "Add image node"}
             </button>
-            <button type="button" onClick={resetImageForm} style={secondaryButtonStyle}>
+            <button type="button" className="btn-secondary" onClick={resetImageForm} disabled={busy}>
               Cancel
             </button>
           </div>
@@ -289,90 +291,5 @@ function FileUpload({ onDataLoaded }) {
     </div>
   );
 }
-
-const panelStyle = {
-  display: "grid",
-  gap: "12px",
-};
-
-const imageFormStyle = {
-  background: "#0b141d",
-  border: "1px solid rgba(135,163,191,0.16)",
-  borderRadius: "14px",
-  padding: "12px",
-};
-
-const helpTextStyle = {
-  fontSize: "12px",
-  color: "#8aa0b6",
-  marginBottom: "6px",
-};
-
-const statusStyle = {
-  fontSize: "12px",
-  color: "#7cc7ff",
-  marginTop: "10px",
-  marginBottom: 0,
-};
-
-const errorStyle = {
-  background: "rgba(203,43,62,0.15)",
-  border: "1px solid rgba(203,43,62,0.45)",
-  color: "#ffb3bd",
-  padding: "10px",
-  borderRadius: "12px",
-  fontSize: "13px",
-};
-
-const inputStyle = {
-  width: "100%",
-  padding: "10px",
-  borderRadius: "10px",
-  border: "1px solid rgba(135,163,191,0.16)",
-  background: "#0b141d",
-  color: "#edf3f8",
-  fontSize: "14px",
-  boxSizing: "border-box",
-};
-
-const coordinateGridStyle = {
-  display: "grid",
-  gridTemplateColumns: "1fr 1fr",
-  gap: "10px",
-};
-
-const buttonRowStyle = {
-  display: "flex",
-  gap: "10px",
-};
-
-const primaryButtonStyle = {
-  flex: 1,
-  background: "linear-gradient(135deg, #1e88d7, #3fb2ff)",
-  color: "white",
-  border: "none",
-  borderRadius: "10px",
-  padding: "10px 12px",
-  cursor: "pointer",
-  fontWeight: "bold",
-};
-
-const secondaryButtonStyle = {
-  flex: 1,
-  background: "transparent",
-  color: "#c8d1dc",
-  border: "1px solid rgba(135,163,191,0.16)",
-  borderRadius: "10px",
-  padding: "10px 12px",
-  cursor: "pointer",
-};
-
-const previewImageStyle = {
-  width: "100%",
-  maxHeight: "180px",
-  objectFit: "cover",
-  borderRadius: "12px",
-  marginBottom: "12px",
-};
 
 export default FileUpload;
