@@ -62,7 +62,7 @@ Front end (read when the app is **built**; see `frontend/.env.example`):
 
 | Variable | What it does |
 |---|---|
-| `REACT_APP_API_URL` | API address including `/api`, e.g. `https://my-api.onrender.com/api`. Default: `http://localhost:5000/api` in development, `/api` in production. It is public: never put the token here |
+| `REACT_APP_API_URL` | The API's address, with or without `/api` (`https://my-api.onrender.com` and `https://my-api.onrender.com/api` both work). Default: `http://localhost:5000` in development, the same site in production. It is public: never put the token here |
 
 > **A Windows gotcha.** If your computer has a system environment variable called `MONGO_DB` (an old installer left one pointing at a folder), it used to silently beat the value in `.env`. In development `backend/.env` now wins and the API prints a note when it replaced a system value. Production always uses the real environment.
 
@@ -129,7 +129,7 @@ The front end is a static site and the API a web service. After updating from an
    - `ADMIN_TOKEN`: a long random value (see above). Keep a copy somewhere safe: it is how you unlock editing.
    - `CORS_ORIGINS`: the address of your front end, e.g. `https://strategic-fusion-dashboard.onrender.com`. **Without it the browser blocks every call from the site.**
    - `MONGO_URI`, `MONGO_DB` as before; `NODE_ENV=production` if Render has not already set it.
-2. **Static site** (Root Directory `frontend`, build `npm install && npm run build`, publish directory `build`): `REACT_APP_API_URL` = `https://YOUR-API.onrender.com/api`, then rebuild.
+2. **Static site** (Root Directory `frontend`, build `npm install && npm run build`, publish directory `build`): `REACT_APP_API_URL` = `https://YOUR-API.onrender.com` (an existing value without `/api` keeps working), then rebuild.
 3. Check `https://YOUR-API.onrender.com/health` and `/api/config` (it should say `"writesEnabled": true`).
 4. Open the site: it can be read at once; *Unlock editing* asks for the token.
 

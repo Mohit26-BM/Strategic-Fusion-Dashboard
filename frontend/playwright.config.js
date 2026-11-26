@@ -29,7 +29,7 @@ module.exports = defineConfig({
     },
     {
       command: "npm start",
-      env: { PORT: "3101", BROWSER: "none", REACT_APP_API_URL: "http://localhost:5101/api" },
+      env: { PORT: "3101", BROWSER: "none", REACT_APP_API_URL: "http://localhost:5101" },
       url: "http://localhost:3101",
       reuseExistingServer: !!process.env.PW_REUSE,
       timeout: 180_000,

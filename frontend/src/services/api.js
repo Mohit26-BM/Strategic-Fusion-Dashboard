@@ -1,11 +1,20 @@
 import { clearToken, getToken } from "./auth";
 
-// Where the API lives. On Render set REACT_APP_API_URL (for example https://your-api.onrender.com/api) when the
-// front end is built. Without it: the local backend while developing, and the same site ("/api") in production.
-const API_URL = (
-  process.env.REACT_APP_API_URL ||
-  (process.env.NODE_ENV === "production" ? "/api" : "http://localhost:5000/api")
-).replace(/\/+$/, "");
+/**
+ * The API address the app talks to, always ending in /api.
+ * REACT_APP_API_URL may be written either way: "https://your-api.onrender.com" (how this project was first deployed)
+ * or "https://your-api.onrender.com/api". Without it: the local backend while developing, and the same site ("/api")
+ * in production.
+ */
+export function resolveApiUrl(configured, isProduction) {
+  const base = String(configured || (isProduction ? "" : "http://localhost:5000"))
+    .trim()
+    .replace(/\/+$/, "")
+    .replace(/\/api$/i, "");
+  return `${base}/api`;
+}
+
+const API_URL = resolveApiUrl(process.env.REACT_APP_API_URL, process.env.NODE_ENV === "production");
 
 // A free Render server sleeps when idle and needs up to a minute to wake, so be patient before giving up.
 const TIMEOUT_MS = 60_000;

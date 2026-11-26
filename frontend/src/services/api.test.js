@@ -136,3 +136,27 @@ describe("bulkAddInBatches", () => {
     expect(result).toEqual({ inserted: 250, skipped: 200, failedBatches: 1, firstError: "No valid nodes" });
   });
 });
+
+describe("resolveApiUrl", () => {
+  const { resolveApiUrl } = require("./api");
+
+  it("accepts the address with or without /api, with or without a trailing slash", () => {
+    const expected = "https://strategic-fusion-dashboard-4pxa.onrender.com/api";
+    expect(resolveApiUrl("https://strategic-fusion-dashboard-4pxa.onrender.com", true)).toBe(expected); // how Render is set today
+    expect(resolveApiUrl("https://strategic-fusion-dashboard-4pxa.onrender.com/", true)).toBe(expected);
+    expect(resolveApiUrl("https://strategic-fusion-dashboard-4pxa.onrender.com/api", true)).toBe(expected);
+    expect(resolveApiUrl("https://strategic-fusion-dashboard-4pxa.onrender.com/api/", true)).toBe(expected);
+    expect(resolveApiUrl("  https://x.onrender.com/API  ", true)).toBe("https://x.onrender.com/api");
+  });
+
+  it("falls back to the local API while developing and to the same site in production", () => {
+    expect(resolveApiUrl("", false)).toBe("http://localhost:5000/api");
+    expect(resolveApiUrl(undefined, false)).toBe("http://localhost:5000/api");
+    expect(resolveApiUrl("", true)).toBe("/api");
+    expect(resolveApiUrl(undefined, true)).toBe("/api");
+  });
+
+  it("does not mangle a path that merely contains 'api'", () => {
+    expect(resolveApiUrl("https://host.example/my-api", true)).toBe("https://host.example/my-api/api");
+  });
+});
